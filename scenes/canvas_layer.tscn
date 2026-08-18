@@ -1,0 +1,136 @@
+[gd_scene format=3 uid="uid://cksexigk5bvbc"]
+
+[ext_resource type="Script" uid="uid://bix5nql604kkn" path="res://scenes/unit_panel.gd" id="1_c4rma"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ex8h3"]
+bg_color = Color(0.40392157, 0.7372549, 0.28235295, 1)
+
+[node name="CanvasLayer" type="CanvasLayer" unique_id=31058534]
+
+[node name="BottomHUD" type="Panel" parent="." unique_id=1429654660]
+custom_minimum_size = Vector2(0, 200)
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 0
+script = ExtResource("1_c4rma")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="BottomHUD" unique_id=112355293]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PotraitContainer" type="Control" parent="BottomHUD/HBoxContainer" unique_id=893822318]
+custom_minimum_size = Vector2(200, 200)
+layout_mode = 2
+
+[node name="Portrait" type="TextureRect" parent="BottomHUD/HBoxContainer/PotraitContainer" unique_id=1695827920]
+custom_minimum_size = Vector2(200, 200)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Energy" type="Panel" parent="BottomHUD/HBoxContainer/PotraitContainer" unique_id=2026194118]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_bottom = 40.0
+grow_horizontal = 0
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="Label" type="Label" parent="BottomHUD/HBoxContainer/PotraitContainer/Energy" unique_id=213217788]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="BottomHUD/HBoxContainer" unique_id=1045873470]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HPBar" type="ProgressBar" parent="BottomHUD/HBoxContainer/VBoxContainer" unique_id=1278403740]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_styles/fill = SubResource("StyleBoxFlat_ex8h3")
+value = 100.0
+
+[node name="Actions" type="HBoxContainer" parent="BottomHUD/HBoxContainer/VBoxContainer" unique_id=822600366]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="Move" type="Button" parent="BottomHUD/HBoxContainer/VBoxContainer/Actions" unique_id=1691119683]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Move
+"
+
+[node name="Skill1" type="Button" parent="BottomHUD/HBoxContainer/VBoxContainer/Actions" unique_id=599933879]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Skill2" type="Button" parent="BottomHUD/HBoxContainer/VBoxContainer/Actions" unique_id=1033701498]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Skill3" type="Button" parent="BottomHUD/HBoxContainer/VBoxContainer/Actions" unique_id=1713107369]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Skill4" type="Button" parent="BottomHUD/HBoxContainer/VBoxContainer/Actions" unique_id=2145938138]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EndTurn" type="Button" parent="BottomHUD/HBoxContainer/VBoxContainer/Actions" unique_id=2053646012]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "End Turn"
+
+[node name="SkillCutscene" type="Control" parent="." unique_id=1598759667]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureRect" type="TextureRect" parent="SkillCutscene" unique_id=525760444]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VideoStreamPlayer" type="VideoStreamPlayer" parent="SkillCutscene" unique_id=1868888236]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand = true

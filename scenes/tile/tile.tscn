@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://dukxve13nyklg"]
+
+[ext_resource type="Script" uid="uid://cbba2i4owcfij" path="res://scenes/tile/tile.gd" id="1_n3f48"]
+[ext_resource type="Script" uid="uid://hinskoxfmpcp" path="res://scenes/tile/click_area.gd" id="2_dvver"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bibkx"]
+size = Vector2(64, 64)
+
+[node name="Tile" type="Node2D" unique_id=403099390]
+script = ExtResource("1_n3f48")
+
+[node name="ClickArea" type="Area2D" parent="." unique_id=2139437299]
+script = ExtResource("2_dvver")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ClickArea" unique_id=26951783]
+position = Vector2(32, 32)
+shape = SubResource("RectangleShape2D_bibkx")

@@ -1,0 +1,33 @@
+[gd_scene format=3 uid="uid://cffgbp01ruk46"]
+
+[ext_resource type="Script" uid="uid://da2w81nacfn1n" path="res://scenes/unit/unit.gd" id="1_btf8p"]
+[ext_resource type="Script" uid="uid://fulmk8ic34f1" path="res://scenes/unit/click_area.gd" id="2_fvc8g"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_vh40f"]
+size = Vector2(64, 64)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fvc8g"]
+bg_color = Color(0.40392157, 0.7372549, 0.28235295, 1)
+
+[node name="Unit" type="Node2D" unique_id=1432069053]
+script = ExtResource("1_btf8p")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1720556451]
+
+[node name="ClickArea" type="Area2D" parent="." unique_id=950364755]
+script = ExtResource("2_fvc8g")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ClickArea" unique_id=2136942083]
+shape = SubResource("RectangleShape2D_vh40f")
+
+[node name="HPBar" type="ProgressBar" parent="." unique_id=22539605]
+custom_minimum_size = Vector2(64, 5)
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -32.0
+offset_top = -64.0
+offset_right = 32.0
+offset_bottom = -37.0
+grow_horizontal = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_fvc8g")

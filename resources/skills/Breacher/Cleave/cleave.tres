@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="Cleave" format=3 uid="uid://12lkk447ljij"]
+
+[ext_resource type="Script" uid="uid://cf2ihfxtl8bpn" path="res://resources/skills/Breacher/Cleave/cleave.gd" id="1_nw8fv"]
+[ext_resource type="Texture2D" uid="uid://dnu3nrk6okkdj" path="res://assets/cleave_placeholder.jpeg" id="1_qyqlm"]
+
+[resource]
+script = ExtResource("1_nw8fv")
+skill_name = "Cleave"
+damage = 30
+cutscene_texture = ExtResource("1_qyqlm")
+metadata/_custom_type_script = "uid://cf2ihfxtl8bpn"

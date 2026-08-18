@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="Unstoppable_force" format=3 uid="uid://dkg37hi5k27ds"]
+
+[ext_resource type="Script" uid="uid://wosjab2ra7o2" path="res://resources/skills/Breacher/Unstoppable_force/unstoppable_force.gd" id="1_o7b0a"]
+[ext_resource type="VideoStream" uid="uid://dvncgg6xquknr" path="res://assets/unstoppable_force_placeholder.ogv" id="1_qlndx"]
+
+[resource]
+script = ExtResource("1_o7b0a")
+skill_name = "Unstoppable Force"
+damage = 10
+cutscene_video = ExtResource("1_qlndx")
+metadata/_custom_type_script = "uid://wosjab2ra7o2"

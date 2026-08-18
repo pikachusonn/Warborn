@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://csplxy6uvqi7l"]
+
+[ext_resource type="Script" uid="uid://h8whgw5dvdue" path="res://resources/unit_data.gd" id="1_vp7m1"]
+[ext_resource type="Texture2D" uid="uid://4bt8xfphbsq2" path="res://assets/archer_texture.jpg" id="2_iixvf"]
+
+[resource]
+script = ExtResource("1_vp7m1")
+unit_name = "Archer"
+health = 75
+damage = 5
+texture = ExtResource("2_iixvf")
+skill1_name = "Piercing Shot"
+skill2_name = "Retreating Shot"
+skill3_name = "Back Shot"
+skill4_name = "Rend"
+metadata/_custom_type_script = "uid://h8whgw5dvdue"
