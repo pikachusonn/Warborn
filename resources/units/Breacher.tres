@@ -5,15 +5,17 @@
 [ext_resource type="Texture2D" uid="uid://grjuyew2q0ki" path="res://assets/breacher_texture.jpg" id="2_vh5x3"]
 [ext_resource type="Resource" uid="uid://12lkk447ljij" path="res://resources/skills/Breacher/Cleave/cleave.tres" id="3_ay3a8"]
 [ext_resource type="Resource" uid="uid://dkg37hi5k27ds" path="res://resources/skills/Breacher/Unstoppable_force/unstoppable_force.tres" id="4_ay3a8"]
+[ext_resource type="Resource" uid="uid://ckrff83phrbt1" path="res://resources/skills/Breacher/Bullwark/bullwark.tres" id="5_pqabi"]
 
 [resource]
 script = ExtResource("1_qs8mr")
 unit_name = "Breacher"
 mobility = 2
+speed = 3
 texture = ExtResource("2_vh5x3")
 skill1_name = "Cleave"
 skill2_name = "Unstoppable force"
 skill3_name = "Bulwark"
 skill4_name = "Shield bash"
-skills = Array[ExtResource("2_1hnp1")]([ExtResource("3_ay3a8"), ExtResource("4_ay3a8")])
+skills = Array[ExtResource("2_1hnp1")]([ExtResource("3_ay3a8"), ExtResource("4_ay3a8"), ExtResource("5_pqabi")])
 metadata/_custom_type_script = "uid://h8whgw5dvdue"

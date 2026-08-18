@@ -5,6 +5,7 @@ class_name UnitData
 @export var health := 100
 @export var damage := 10
 @export var mobility := 1
+@export var speed := 1
 
 @export var texture: Texture2D
 

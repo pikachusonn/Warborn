@@ -66,13 +66,31 @@ func execute(
 	direction: Vector2i,
 	distance: int
 ):
-	# Calculate the furthest valid destination for Breacher
+	# Get opposing units
+	var units = (
+		grid.enemy_units
+		if unit in grid.player_units
+		else grid.player_units
+	)
+
+	# Calculate the furthest valid destination for Breacher.
+	# Breacher cannot move onto an occupied enemy tile.
 	var destination := unit.grid_position
 
 	for step in range(1, distance + 1):
 		var next_position := destination + direction
 
+		# Stop if the tile is outside the board
 		if not grid.tiles.has(next_position):
+			break
+
+		# Stop before an enemy
+		var units_on_next_tile := grid.get_units_on_tiles(
+			[next_position],
+			units
+		)
+
+		if not units_on_next_tile.is_empty():
 			break
 
 		destination = next_position
@@ -85,12 +103,6 @@ func execute(
 	)
 
 	# Get enemies inside the affected area
-	var units = (
-		grid.enemy_units
-		if grid.active_side == grid.Turn.PLAYER
-		else grid.player_units
-	)
-
 	var targets := grid.get_units_on_tiles(
 		target_positions,
 		units
@@ -110,8 +122,8 @@ func execute(
 
 		if displacement == direction:
 			# Head-on:
-			# 2 tiles beyond Breacher's final destination
-			new_position = destination + direction * 2
+			# Push the enemy one tile in the charge direction
+			new_position = target.grid_position + direction
 		else:
 			# Side hit:
 			# Move one tile sideways from the enemy's current position

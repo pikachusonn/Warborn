@@ -25,13 +25,16 @@ var enemies_characters = []
 var player_units: Array[Unit] = []
 var enemy_units: Array[Unit] = []
 
+var turn_order: Array[Unit] = []
+var turn_index := 0
 var active_unit: Unit
-var active_side := Turn.PLAYER
-var energy := 4
+var energy := 0
+var free_movement := false
 
 var active_skill: Skill = null
 var targeting_skill := false
 var locked_skill_direction: Vector2i
+var skill_preview_nodes: Array[Node] = []
 
 @onready var unit_panel: UnitPanel = $CanvasLayer/BottomHUD
 @onready var skill_cutscene: Control = $CanvasLayer/SkillCutscene
@@ -84,7 +87,8 @@ func _ready() -> void:
 	unit_panel.skill2_pressed.connect(handle_skill_pressed.bind(1, Action.SKILL2))
 	unit_panel.skill3_pressed.connect(handle_skill_pressed.bind(2, Action.SKILL3))
 	unit_panel.skill4_pressed.connect(handle_skill_pressed.bind(3, Action.SKILL4))
-	unit_panel.end_turn_pressed.connect(handle_deselect)
+	unit_panel.end_turn_pressed.connect(end_turn)
+	start_combat()
 	
 func _process(_delta: float) -> void:
 
@@ -187,10 +191,16 @@ func spawn_team(team):
 		#move_unit(active_unit, dir)
 		
 func move_unit(unit: Unit, target_pos: Vector2i):
-	if energy <= 0:
+	if not tiles.has(target_pos):
 		return
-	if !tiles.has(target_pos):
+	#First movement is free
+	if free_movement:
+		free_movement = false
+	elif energy > 0:
+		energy -= 1
+	else:
 		return
+	
 	unit.grid_position = target_pos
 	unit.position = (Vector2(target_pos) * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2))
 	energy -= 1
@@ -203,21 +213,16 @@ func move_unit(unit: Unit, target_pos: Vector2i):
 		
 func end_turn():
 	active_unit.set_selected(false)
-	if(active_side == Turn.PLAYER):
-		active_side = Turn.ENEMY
-	else:
-		active_side = Turn.PLAYER
-	energy = 4
-	unit_panel.update_energy(4)
 	active_unit = null
 	unit_panel.hide()
+	turn_index += 1
+	if turn_index >= turn_order.size():
+		turn_index = 0
 	update_unit_visuals()
+	start_unit_turn(turn_order[turn_index])
 	
 func handle_unit_clicked(unit: Unit):
 	if(targeting_skill):
-		return
-	if(unit.side != active_side):
-		active_unit = null
 		return
 	if(active_unit):
 		active_unit.set_selected(false)	
@@ -229,7 +234,7 @@ func handle_unit_clicked(unit: Unit):
 func handle_tile_clicked(pos: Vector2i):
 	if(active_unit == null):
 		return
-	if(tiles[pos] not in target_tiles):
+	if(tiles[pos] not in target_tiles && !active_skill.instant_cast()):
 		print("invalid position: ", tiles[pos], pos)
 		return;
 	match current_action:
@@ -242,24 +247,22 @@ func handle_tile_clicked(pos: Vector2i):
 		Action.SKILL2:
 			execute_skill()
 		Action.SKILL3:
-			print("Skill 3")
+			execute_skill()
 		Action.SKILL4:
 			print("Skill 4")
 	
 func update_unit_visuals():
-	for unit in player_units:
-		unit.set_active(
-			active_side == Turn.PLAYER
-		)
-	for unit in enemy_units:
-		unit.set_active(
-			active_side == Turn.ENEMY
-		)
+	for unit in turn_order:
+		unit.set_active(unit == active_unit)
 
 func clear_move_range():
 	for tile in target_tiles:
 		tile.set_moveable(false)
 	target_tiles.clear()
+	for node in skill_preview_nodes:
+		if is_instance_valid(node):
+			node.queue_free()
+	skill_preview_nodes.clear()
 
 func clean_up_skill():
 	for tile in target_tiles:
@@ -269,7 +272,7 @@ func clean_up_skill():
 	targeting_skill = false
 	target_tiles.clear()
 	current_action = Action.NONE
-	if energy == 0:
+	if energy == 0 && free_movement:
 		end_turn()
 	
 func calculate_move_range(unit: Unit):
@@ -299,10 +302,10 @@ func show_attack_range(skill: Skill, unit: Unit, direction: Vector2i, distance: 
 	for target in target_positions:
 		if not tiles.has(target):
 			continue
-
 		var tile = tiles[target]
 		tile.set_attackable(true)
 		target_tiles.append(tile)
+	skill.show_preview(self, unit, direction)
 
 func show_locked_tiles(target_positions: Array[Vector2i]):
 	for target in target_positions:
@@ -333,15 +336,6 @@ func handle_skill_pressed(skill_number: int, action: Action):
 	current_action = action
 	targeting_skill = true
 	active_skill = active_unit.data.skills[skill_number]
-
-func handle_deselect():
-	if(active_unit):
-		active_unit.set_selected(false)
-		active_unit = null
-		current_action = Action.NONE
-		clear_move_range()
-		clean_up_skill()
-		unit_panel.hide()
 			
 func get_direction_to_mouse(unit: Unit) -> Vector2i:
 	var mouse_pos := get_global_mouse_position()
@@ -368,6 +362,8 @@ func get_units_on_tiles(target_positions: Array[Vector2i], units: Array[Unit]) -
 	return targets
 	
 func execute_skill():
+	if energy <= 0:
+		return
 	if not active_skill or not active_unit:
 		return
 	locked_skill_direction = get_direction_to_mouse(active_unit)
@@ -408,3 +404,25 @@ func show_skill_cutscene_video(video: VideoStream):
 	skill_cutscene.show()
 	return video_player
 	
+func start_combat():
+	initialize_turn_order()
+	start_unit_turn(turn_order[turn_index])
+
+func initialize_turn_order():
+	turn_order.clear()
+	turn_order.append_array(player_units)
+	turn_order.append_array(enemy_units)
+	turn_order.sort_custom(
+		func(a: Unit, b: Unit):
+			return a.data.speed > b.data.speed
+	)
+	turn_index = 0
+
+func start_unit_turn(unit: Unit):
+	active_unit = unit
+	energy = 1
+	free_movement = true
+	active_unit.set_selected(true)
+	unit_panel.update_energy(energy)
+	update_unit_visuals()
+	unit_panel.show_unit(unit)

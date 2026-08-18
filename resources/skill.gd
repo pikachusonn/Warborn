@@ -11,3 +11,9 @@ func get_target_tiles(unit: Unit, direction: Vector2i, distance: int = 1) -> Arr
 
 func execute(grid: GridField, unit: Unit, target_positions: Array[Vector2i], direction: Vector2i, distance: int):
 	pass
+
+func show_preview(grid: GridField, unit: Unit, direction: Vector2i):
+	pass
+
+func instant_cast() -> bool:
+	return false

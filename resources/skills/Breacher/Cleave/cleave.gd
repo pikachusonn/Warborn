@@ -43,7 +43,7 @@ func execute(
 	direction: Vector2i,
 	distance: int
 ):
-	var units = grid_field.enemy_units if grid_field.active_side == grid_field.Turn.PLAYER else grid_field.player_units
+	var units := (grid_field.enemy_units if unit in grid_field.player_units else grid_field.player_units)
 	var targets := grid_field.get_units_on_tiles(
 		target_positions,
 		units
