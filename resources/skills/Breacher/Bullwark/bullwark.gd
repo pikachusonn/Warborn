@@ -100,7 +100,6 @@ func create_shield_visual(
 
 
 func clear_bulwark():
-	print("hehehehe cleared", active_shield, shield_owner)
 	if is_instance_valid(active_shield):
 		active_shield.queue_free()
 

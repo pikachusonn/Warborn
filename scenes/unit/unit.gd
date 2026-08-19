@@ -7,6 +7,7 @@ enum Side {
 }
 
 @export var data: UnitData
+@export var skills: Array[Skill]
 var side: Side
 var current_health: int
 var grid_position: Vector2i
@@ -27,6 +28,11 @@ func _process(delta: float) -> void:
 func setup(pos: Vector2i, unit_data: UnitData, unit_side):
 	grid_position = pos
 	data = unit_data
+	skills = []
+	for skill in unit_data.skills:
+		var skill_copy = skill.duplicate(true)
+		print("Unit setup: ", unit_data.unit_name, ", Original: ", skill.get_instance_id(), ", Copy: ", skill_copy.get_instance_id())
+		skills.append(skill_copy)
 	side = unit_side
 	current_health = data.health
 	sprite.texture = data.texture

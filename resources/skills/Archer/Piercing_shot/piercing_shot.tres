@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="Piercing_shot" format=3 uid="uid://lxctbg3qepep"]
+
+[ext_resource type="Script" uid="uid://cw18ymvyrng4w" path="res://resources/skills/Archer/Piercing_shot/piercing_shot.gd" id="1_qm77m"]
+
+[resource]
+script = ExtResource("1_qm77m")
+skill_name = "Piercing Shot"
+damage = 20
+metadata/_custom_type_script = "uid://cw18ymvyrng4w"

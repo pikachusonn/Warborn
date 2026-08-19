@@ -54,6 +54,7 @@ func _ready() -> void:
 	var t: TileScene
 	position = get_viewport_rect().size / 2
 	position -= Vector2(WIDTH, HEIGHT) * TILE_SIZE / 2
+	position.y -= 100
 	players_characters = [
 		{
 			"data": breacher_data,
@@ -61,14 +62,14 @@ func _ready() -> void:
 			"side": Unit.Side.PLAYER
 		},
 		{
-			"data": breacher_data,
+			"data": archer_data,
 			"position": Vector2i(4, 9),
 			"side": Unit.Side.PLAYER
 		}
 	]
 	enemies_characters = [
 		{
-			"data": archer_data,
+			"data": breacher_data,
 			"position": Vector2i(5, 0),
 			"side": Unit.Side.ENEMY
 		},
@@ -231,6 +232,7 @@ func handle_unit_clicked(unit: Unit):
 	active_unit.set_selected(true)
 	
 func handle_tile_clicked(pos: Vector2i):
+	print(active_unit)
 	if(active_unit == null):
 		return
 	if tiles[pos] not in target_tiles && (active_skill == null || !active_skill.instant_cast()):
@@ -304,7 +306,7 @@ func show_attack_range(skill: Skill, unit: Unit, direction: Vector2i, distance: 
 		var tile = tiles[target]
 		tile.set_attackable(true)
 		target_tiles.append(tile)
-	#skill.show_preview(self, unit, direction)
+	skill.show_preview(self, unit, direction)
 
 func show_locked_tiles(target_positions: Array[Vector2i]):
 	for target in target_positions:
@@ -334,7 +336,7 @@ func handle_skill_pressed(skill_number: int, action: Action):
 	clear_move_range()
 	current_action = action
 	targeting_skill = true
-	active_skill = active_unit.data.skills[skill_number]
+	active_skill = active_unit.skills[skill_number]
 			
 func get_direction_to_mouse(unit: Unit) -> Vector2i:
 	var mouse_pos := get_global_mouse_position()
@@ -425,5 +427,5 @@ func start_unit_turn(unit: Unit):
 	unit_panel.update_energy(energy)
 	update_unit_visuals()
 	unit_panel.show_unit(unit)
-	for skill in unit.data.skills:
+	for skill in unit.skills:
 		skill.on_owner_turn_start()
