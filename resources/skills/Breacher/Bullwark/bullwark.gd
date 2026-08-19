@@ -1,6 +1,9 @@
 extends Skill
 class_name Bullwark
 
+var active_shield: Line2D = null
+var shield_owner: Unit = null
+
 func instant_cast() -> bool:
 	return true
 
@@ -9,18 +12,56 @@ func show_preview(
 	unit: Unit,
 	direction: Vector2i
 ):
+	# Remove any existing preview first.
+	clear_preview(grid)
+
+	var shield_line := create_shield_visual(grid, unit)
+
+	if shield_line == null:
+		return
+
+	grid.skill_preview_nodes.append(shield_line)
+
+
+func execute(
+	grid: GridField,
+	unit: Unit,
+	target_positions: Array[Vector2i],
+	direction: Vector2i,
+	distance: int
+):
+	# Remove this Breacher's previous Bulwark.
+	clear_bulwark()
+
+	shield_owner = unit
+	active_shield = create_shield_visual(grid, unit)
+
+
+func create_shield_visual(
+	grid: GridField,
+	unit: Unit
+) -> Line2D:
 	var center := unit.grid_position
 
+	# Grid Y increases downward.
+	# Therefore y - 1 is visually above Breacher.
 	var shield_y = clamp(center.y - 1, 0, 9)
 
-	var left_tile := Vector2i(center.x - 1, shield_y)
-	var right_tile := Vector2i(center.x + 1, shield_y)
+	var left_tile := Vector2i(
+		center.x - 1,
+		shield_y
+	)
+
+	var right_tile := Vector2i(
+		center.x + 1,
+		shield_y
+	)
 
 	if not grid.tiles.has(left_tile):
-		return
+		return null
 
 	if not grid.tiles.has(right_tile):
-		return
+		return null
 
 	var left_position = (
 		grid.tiles[left_tile].global_position
@@ -31,9 +72,12 @@ func show_preview(
 		grid.tiles[right_tile].global_position
 		+ Vector2(32, 32)
 	)
+
+	# Extend to the outer edges of the 3 tiles.
 	left_position.x -= 32
 	right_position.x += 32
-	# Move the line closer to Breacher
+
+	# Move the line closer to Breacher.
 	left_position.y += 32
 	right_position.y += 32
 
@@ -51,46 +95,23 @@ func show_preview(
 	shield_line.add_point(right_position)
 
 	grid.add_child(shield_line)
-	grid.skill_preview_nodes.append(shield_line)
 
-func execute(
-	grid: GridField,
-	unit: Unit,
-	target_positions: Array[Vector2i],
-	direction: Vector2i,
-	distance: int
-):
-	var center := unit.grid_position
+	return shield_line
 
-	# Three tiles wide, positioned one tile above Breacher.
-	var left_tile := center + Vector2i(-1, 1)
-	var right_tile := center + Vector2i(1, 1)
 
-	# Make sure both edge tiles exist before creating the visual.
-	if not grid.tiles.has(left_tile):
-		return
+func clear_bulwark():
+	print("hehehehe cleared", active_shield, shield_owner)
+	if is_instance_valid(active_shield):
+		active_shield.queue_free()
 
-	if not grid.tiles.has(right_tile):
-		return
+	active_shield = null
+	shield_owner = null
 
-	var left_position: Vector2 = (
-		grid.tiles[left_tile].global_position
-		+ Vector2(32, 32)
-	)
+func clear_preview(grid: GridField):
+	for node in grid.skill_preview_nodes:
+		if is_instance_valid(node):
+			node.queue_free()
+	grid.skill_preview_nodes.clear()
 
-	var right_position: Vector2 = (
-		grid.tiles[right_tile].global_position
-		+ Vector2(32, 32)
-	)
-
-	# Create the shield line.
-	var shield_line := Line2D.new()
-
-	shield_line.width = 8.0
-	shield_line.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	shield_line.end_cap_mode = Line2D.LINE_CAP_ROUND
-
-	shield_line.add_point(left_position)
-	shield_line.add_point(right_position)
-
-	grid.add_child(shield_line)
+func on_owner_turn_start():
+	clear_bulwark()

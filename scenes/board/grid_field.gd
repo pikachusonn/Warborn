@@ -203,7 +203,6 @@ func move_unit(unit: Unit, target_pos: Vector2i):
 	
 	unit.grid_position = target_pos
 	unit.position = (Vector2(target_pos) * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2))
-	energy -= 1
 	unit_panel.update_energy(energy)
 	clear_move_range()
 	#unit_panel.hide()
@@ -234,7 +233,7 @@ func handle_unit_clicked(unit: Unit):
 func handle_tile_clicked(pos: Vector2i):
 	if(active_unit == null):
 		return
-	if(tiles[pos] not in target_tiles && !active_skill.instant_cast()):
+	if tiles[pos] not in target_tiles && (active_skill == null || !active_skill.instant_cast()):
 		print("invalid position: ", tiles[pos], pos)
 		return;
 	match current_action:
@@ -272,7 +271,7 @@ func clean_up_skill():
 	targeting_skill = false
 	target_tiles.clear()
 	current_action = Action.NONE
-	if energy == 0 && free_movement:
+	if energy == 0 && !free_movement:
 		end_turn()
 	
 func calculate_move_range(unit: Unit):
@@ -305,7 +304,7 @@ func show_attack_range(skill: Skill, unit: Unit, direction: Vector2i, distance: 
 		var tile = tiles[target]
 		tile.set_attackable(true)
 		target_tiles.append(tile)
-	skill.show_preview(self, unit, direction)
+	#skill.show_preview(self, unit, direction)
 
 func show_locked_tiles(target_positions: Array[Vector2i]):
 	for target in target_positions:
@@ -426,3 +425,5 @@ func start_unit_turn(unit: Unit):
 	unit_panel.update_energy(energy)
 	update_unit_visuals()
 	unit_panel.show_unit(unit)
+	for skill in unit.data.skills:
+		skill.on_owner_turn_start()

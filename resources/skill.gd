@@ -17,3 +17,6 @@ func show_preview(grid: GridField, unit: Unit, direction: Vector2i):
 
 func instant_cast() -> bool:
 	return false
+
+func on_owner_turn_start():
+	pass
