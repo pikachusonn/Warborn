@@ -6,21 +6,32 @@ enum Side {
 	ENEMY
 }
 
+const EFFECTS = {
+	ALLY_ARCHER_MARK = 'ally_archer_mark',
+	ENEMY_ARCHER_MARK = 'enemy_archer_mark',
+	STUNNED = 'stunned'
+}
+
 @export var data: UnitData
 @export var skills: Array[Skill]
 var side: Side
 var current_health: int
 var grid_position: Vector2i
 var is_selected := false
+var status_effects: Dictionary = {}
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var click_area: UnitClickArea = $ClickArea
-
 @onready var hp_bar: ProgressBar = $HPBar
+@onready var ally_archer_mark: TextureRect = $StatusEffects/HunterMark
+@onready var enemy_archer_mark: TextureRect = $StatusEffects/EnemyHunterMark
+@onready var stun_icon: TextureRect = $StatusEffects/Stun
+@onready var effects_wrapper: HBoxContainer = $StatusEffects
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	hp_bar.hide()
+	effects_wrapper.set_position(Vector2i(-32, -52))
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
 	pass
@@ -31,7 +42,6 @@ func setup(pos: Vector2i, unit_data: UnitData, unit_side):
 	skills = []
 	for skill in unit_data.skills:
 		var skill_copy = skill.duplicate(true)
-		print("Unit setup: ", unit_data.unit_name, ", Original: ", skill.get_instance_id(), ", Copy: ", skill_copy.get_instance_id())
 		skills.append(skill_copy)
 	side = unit_side
 	current_health = data.health
@@ -103,9 +113,12 @@ func take_damage(amount: int):
 	print(data.unit_name, " took ", amount, " damage. HP: ", current_health)
 
 func set_hovered(hovered: bool):
+	hp_bar.visible = hovered
 	if(hovered):
 		update_hp_bar()
-	hp_bar.visible = hovered
+		effects_wrapper.set_position(Vector2i(-32, -82))
+	else:
+		effects_wrapper.set_position(Vector2i(-32, -52))
 
 func shake():
 	var original_position := position
@@ -116,3 +129,29 @@ func shake():
 	set_hovered(true)
 	await get_tree().create_timer(1.0).timeout
 	set_hovered(false)
+
+func add_status(status: String, stacks: int = 1):
+	status_effects[status] = status_effects.get(status, 0) + stacks
+	update_status_icons()
+
+func remove_status(status: String):
+	status_effects.erase(status)
+	update_status_icons()
+
+func has_status(status: String) -> bool:
+	return status_effects.has(status)
+
+func get_status_stacks(status: String) -> int:
+	return status_effects.get(status, 0)
+	
+func deduct_status_stack(status: String):
+	if not status_effects.has(status):
+		return
+	status_effects[status] -= 1
+	if status_effects[status] <= 0:
+		remove_status(status)
+
+func update_status_icons():
+	ally_archer_mark.visible = has_status(EFFECTS.ALLY_ARCHER_MARK)
+	stun_icon.visible = has_status(EFFECTS.STUNNED)
+	enemy_archer_mark.visible = has_status(EFFECTS.ENEMY_ARCHER_MARK)

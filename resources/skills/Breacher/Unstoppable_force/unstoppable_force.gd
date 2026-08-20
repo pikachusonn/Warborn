@@ -2,6 +2,7 @@ extends Skill
 class_name Unstoppable_force
 
 func get_target_tiles(
+	grid_field: GridField,
 	unit: Unit,
 	direction: Vector2i,
 	distance: int = 1

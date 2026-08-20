@@ -1,10 +1,8 @@
 [gd_resource type="Resource" script_class="Bullwark" format=3 uid="uid://ckrff83phrbt1"]
 
-[ext_resource type="Texture2D" uid="uid://bgfg2qh0mjju8" path="res://assets/bulwark_placeholder.jpeg" id="1_xwppx"]
 [ext_resource type="Script" uid="uid://46h6ihorjk5j" path="res://resources/skills/Breacher/Bullwark/bullwark.gd" id="2_n7oea"]
 
 [resource]
 script = ExtResource("2_n7oea")
 skill_name = "Bullwark"
-cutscene_texture = ExtResource("1_xwppx")
 metadata/_custom_type_script = "uid://46h6ihorjk5j"

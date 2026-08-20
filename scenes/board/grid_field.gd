@@ -1,44 +1,46 @@
 extends Node2D
 class_name GridField
+# ================================
+# BOARD
+# ================================
+const WIDTH := 10
+const HEIGHT := 10
+const TILE_SIZE := 64
+var tiles := {}
+var hovered_tile: TileScene
+var target_tiles: Array[TileScene] = []
+@export var tile_scene: PackedScene
+# ================================
+# UNITS
+# ================================
+var players_characters = []
+var enemies_characters = []
+var player_units: Array[Unit] = []
+var enemy_units: Array[Unit] = []
+@export var unit_scene: PackedScene
+@export var breacher_data: UnitData
+@export var archer_data: UnitData
+# ================================
+# TURN
+# ================================
 enum Turn {
 	PLAYER,
 	ENEMY
 }
-
-const WIDTH := 10
-const HEIGHT := 10
-const TILE_SIZE := 64
-
-var tiles := {}
-var hovered_tile: TileScene
-var hovered_unit: Unit
-var target_tiles: Array[TileScene] = []
-
-@export var tile_scene: PackedScene
-@export var unit_scene: PackedScene
-@export var breacher_data: UnitData
-@export var archer_data: UnitData
-
-var players_characters = []
-var enemies_characters = []
-
-var player_units: Array[Unit] = []
-var enemy_units: Array[Unit] = []
-
 var turn_order: Array[Unit] = []
 var turn_index := 0
 var active_unit: Unit
 var energy := 0
 var free_movement := false
-
+# ================================
+# SKILLS / TARGETING
+# ================================
 var active_skill: Skill = null
 var targeting_skill := false
 var locked_skill_direction: Vector2i
 var skill_preview_nodes: Array[Node] = []
-
-@onready var unit_panel: UnitPanel = $CanvasLayer/BottomHUD
-@onready var skill_cutscene: Control = $CanvasLayer/SkillCutscene
-
+var current_action := Action.NONE
+var projectile_blockers: Dictionary = {}
 enum Action {
 	MOVE,
 	SKILL1,
@@ -47,8 +49,12 @@ enum Action {
 	SKILL4,
 	NONE
 }
-
-var current_action := Action.NONE
+# ================================
+# UI
+# ================================
+var hovered_unit: Unit
+@onready var unit_panel: UnitPanel = $CanvasLayer/BottomHUD
+@onready var skill_cutscene: Control = $CanvasLayer/SkillCutscene
 
 func _ready() -> void:
 	var t: TileScene
@@ -173,23 +179,6 @@ func spawn_team(team):
 		var pos: Vector2i = character["position"]
 		var side: Unit.Side = character["side"]
 		spawn_character(data, pos, side)
-
-#func _unhandled_input(event):
-	#if active_unit == null:
-		#return
-#
-	#var dir := Vector2i.ZERO
-#
-	#if event.is_action_pressed("move_up"):
-		#dir = Vector2i.UP
-	#elif event.is_action_pressed("move_down"):
-		#dir = Vector2i.DOWN
-	#elif event.is_action_pressed("move_left"):
-		#dir = Vector2i.LEFT
-	#elif event.is_action_pressed("move_right"):
-		#dir = Vector2i.RIGHT
-	#if dir != Vector2i.ZERO:
-		#move_unit(active_unit, dir)
 		
 func move_unit(unit: Unit, target_pos: Vector2i):
 	if not tiles.has(target_pos):
@@ -232,7 +221,6 @@ func handle_unit_clicked(unit: Unit):
 	active_unit.set_selected(true)
 	
 func handle_tile_clicked(pos: Vector2i):
-	print(active_unit)
 	if(active_unit == null):
 		return
 	if tiles[pos] not in target_tiles && (active_skill == null || !active_skill.instant_cast()):
@@ -299,7 +287,7 @@ func calculate_move_range(unit: Unit):
 			
 func show_attack_range(skill: Skill, unit: Unit, direction: Vector2i, distance: int = 1):
 	clear_move_range()
-	var target_positions: Array[Vector2i] = skill.get_target_tiles(unit, direction, distance)
+	var target_positions: Array[Vector2i] = skill.get_target_tiles(self, unit, direction, distance)
 	for target in target_positions:
 		if not tiles.has(target):
 			continue
@@ -370,6 +358,7 @@ func execute_skill():
 	locked_skill_direction = get_direction_to_mouse(active_unit)
 	var locked_distance = get_skill_distance(active_unit)
 	var target_positions: Array[Vector2i] = active_skill.get_target_tiles(
+		self,
 		active_unit,
 		locked_skill_direction,
 		locked_distance
@@ -428,4 +417,18 @@ func start_unit_turn(unit: Unit):
 	update_unit_visuals()
 	unit_panel.show_unit(unit)
 	for skill in unit.skills:
-		skill.on_owner_turn_start()
+		skill.on_owner_turn_start(self)
+
+func add_projectile_blocker(tile: Vector2i, blocker):
+	projectile_blockers[tile] = blocker
+	
+func remove_projectile_blocker(tile: Vector2i):
+	projectile_blockers.erase(tile)
+	
+func get_projectile_blocker(tile: Vector2i, unit: Unit):
+	var blocker = projectile_blockers.get(tile)
+	if blocker == null:
+		return null
+	if unit in (player_units if blocker.owner in player_units else enemy_units):
+		return null
+	return blocker

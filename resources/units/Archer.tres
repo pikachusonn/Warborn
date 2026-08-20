@@ -10,6 +10,7 @@ script = ExtResource("1_vp7m1")
 unit_name = "Archer"
 health = 75
 damage = 5
+mobility = 2
 texture = ExtResource("2_iixvf")
 skill1_name = "Piercing Shot"
 skill2_name = "Retreating Shot"

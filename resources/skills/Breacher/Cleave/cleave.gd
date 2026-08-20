@@ -2,6 +2,7 @@ extends Skill
 class_name Cleave
 
 func get_target_tiles(
+	grid_field: GridField,
 	unit: Unit,
 	direction: Vector2i,
 	_distance: int = 1

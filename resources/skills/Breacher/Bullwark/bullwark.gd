@@ -2,7 +2,8 @@ extends Skill
 class_name Bullwark
 
 var active_shield: Line2D = null
-var shield_owner: Unit = null
+var owner: Unit = null
+var blocked_tiles: Array[Vector2i]
 
 func instant_cast() -> bool:
 	return true
@@ -31,9 +32,9 @@ func execute(
 	distance: int
 ):
 	# Remove this Breacher's previous Bulwark.
-	clear_bulwark()
+	clear_bulwark(grid)
 
-	shield_owner = unit
+	owner = unit
 	active_shield = create_shield_visual(grid, unit)
 
 
@@ -45,18 +46,27 @@ func create_shield_visual(
 
 	# Grid Y increases downward.
 	# Therefore y - 1 is visually above Breacher.
-	var shield_y = clamp(center.y - 1, 0, 9)
+	var shield_y: int
+	var is_ally = unit in grid.player_units
+	if is_ally:
+		shield_y = center.y - 1
+	else:
+		shield_y = center.y
+
+	shield_y = clamp(shield_y, 0, 9)
 
 	var left_tile := Vector2i(
 		center.x - 1,
-		shield_y
+		shield_y if !is_ally else shield_y + 1
 	)
 
 	var right_tile := Vector2i(
 		center.x + 1,
-		shield_y
+		shield_y if !is_ally else shield_y + 1
 	)
-
+	blocked_tiles = [left_tile, center, right_tile]
+	for tile in blocked_tiles:
+		grid.add_projectile_blocker(tile, self)
 	if not grid.tiles.has(left_tile):
 		return null
 
@@ -78,8 +88,12 @@ func create_shield_visual(
 	right_position.x += 32
 
 	# Move the line closer to Breacher.
-	left_position.y += 32
-	right_position.y += 32
+	if is_ally:
+		left_position.y -= 32
+		right_position.y -= 32
+	else:
+		left_position.y += 32
+		right_position.y += 32
 
 	var shield_line := Line2D.new()
 
@@ -99,12 +113,14 @@ func create_shield_visual(
 	return shield_line
 
 
-func clear_bulwark():
+func clear_bulwark(grid: GridField):
 	if is_instance_valid(active_shield):
 		active_shield.queue_free()
-
+	for tile in blocked_tiles:
+		grid.remove_projectile_blocker(tile)
+	blocked_tiles = []
 	active_shield = null
-	shield_owner = null
+	owner = null
 
 func clear_preview(grid: GridField):
 	for node in grid.skill_preview_nodes:
@@ -112,5 +128,5 @@ func clear_preview(grid: GridField):
 			node.queue_free()
 	grid.skill_preview_nodes.clear()
 
-func on_owner_turn_start():
-	clear_bulwark()
+func on_owner_turn_start(grid: GridField):
+	clear_bulwark(grid)
