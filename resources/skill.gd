@@ -7,6 +7,23 @@ class_name Skill
 @export var cutscene_video: VideoStream
 @export var is_projectile: bool
 
+func begin(grid_field: GridField, unit: Unit):
+	pass
+	
+func on_tile_clicked(
+	grid_field: GridField, unit: Unit, pos: Vector2i
+) -> void:
+	pass
+	
+func update_preview(
+	grid: GridField,
+	unit: Unit
+) -> void:
+	pass
+
+func cancel(grid: GridField, unit: Unit) -> void:
+	grid.clean_up_skill()
+
 func get_target_tiles(grid_field: GridField,unit: Unit, direction: Vector2i, distance: int = 1) -> Array[Vector2i]:
 	return []
 

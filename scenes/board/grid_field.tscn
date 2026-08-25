@@ -5,7 +5,6 @@
 [ext_resource type="PackedScene" uid="uid://cffgbp01ruk46" path="res://scenes/unit/unit.tscn" id="3_7hqsk"]
 [ext_resource type="Resource" uid="uid://yhx05donnpb1" path="res://resources/units/Breacher.tres" id="4_vlvcf"]
 [ext_resource type="Resource" uid="uid://csplxy6uvqi7l" path="res://resources/units/Archer.tres" id="5_xmbel"]
-[ext_resource type="Script" uid="uid://drnl62itlgxtu" path="res://resources/skill.gd" id="6_2lxyn"]
 [ext_resource type="PackedScene" uid="uid://cksexigk5bvbc" path="res://scenes/canvas_layer.tscn" id="6_4gtxg"]
 
 [node name="GridField" type="Node2D" unique_id=1515789650]
@@ -18,6 +17,5 @@ archer_data = ExtResource("5_xmbel")
 [node name="Tile" parent="." unique_id=403099390 instance=ExtResource("2_7hqsk")]
 
 [node name="Unit" parent="." unique_id=1432069053 instance=ExtResource("3_7hqsk")]
-skills = Array[ExtResource("6_2lxyn")]([])
 
 [node name="CanvasLayer" parent="." unique_id=31058534 instance=ExtResource("6_4gtxg")]

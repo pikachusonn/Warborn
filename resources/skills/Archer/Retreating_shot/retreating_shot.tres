@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="Retreating_shot" format=3 uid="uid://dygqk756v2hpm"]
+
+[ext_resource type="Resource" uid="uid://lxctbg3qepep" path="res://resources/skills/Archer/Piercing_shot/piercing_shot.tres" id="1_h3urs"]
+[ext_resource type="Script" uid="uid://cyuw13xq12ks2" path="res://resources/skills/Archer/Retreating_shot/retreating_shot.gd" id="1_jqbyu"]
+
+[resource]
+script = ExtResource("1_jqbyu")
+piercing_shot = ExtResource("1_h3urs")
+metadata/_custom_type_script = "uid://cyuw13xq12ks2"

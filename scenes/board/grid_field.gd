@@ -6,7 +6,7 @@ class_name GridField
 const WIDTH := 10
 const HEIGHT := 10
 const TILE_SIZE := 64
-var tiles := {}
+var tiles: Dictionary[Vector2i, TileScene] = {}
 var hovered_tile: TileScene
 var target_tiles: Array[TileScene] = []
 @export var tile_scene: PackedScene
@@ -98,38 +98,24 @@ func _ready() -> void:
 	start_combat()
 	
 func _process(_delta: float) -> void:
-
 	var mouse_pos = get_global_mouse_position()
-
 	var local_mouse = to_local(mouse_pos)
-
 	var grid_pos = Vector2i(local_mouse / TILE_SIZE)
-
 	if not tiles.has(grid_pos):
 		clear_hover()
 		if hovered_unit:
 			hovered_unit.set_hovered(false)
 			hovered_unit = null
 		return
-
+	if active_skill and active_unit:
+		active_skill.update_preview(self, active_unit)
 	var tile = tiles[grid_pos]
-
 	if tile == hovered_tile:
 		return
 	clear_hover()
 	hovered_tile = tile
 	hovered_tile.set_hovered(true)
 	update_hovered_unit(tile)
-	if targeting_skill and active_skill and active_unit:
-		var direction := get_direction_to_mouse(active_unit)
-		var distance := get_skill_distance(active_unit)
-		show_attack_range(
-			active_skill,
-			active_unit,
-			direction,
-			distance
-		)
-
 
 func clear_hover() -> void:
 	if hovered_tile:
@@ -232,7 +218,8 @@ func handle_tile_clicked(pos: Vector2i):
 			current_action = Action.NONE
 			unit_panel.clear_skill_active()
 		_:
-			execute_skill()
+			if active_skill:
+				active_skill.on_tile_clicked(self, active_unit, pos)
 	
 func update_unit_visuals():
 	for unit in turn_order:
@@ -248,15 +235,19 @@ func clear_move_range():
 	skill_preview_nodes.clear()
 
 func clean_up_skill():
+	clear_move_range()
+	active_skill = null
+	if energy == 0 && !free_movement:
+		end_turn()
+		
+func clear_skill_state():
 	for tile in target_tiles:
 		tile.set_moveable(false)
 		tile.set_attackable(false)
-	active_skill = null
-	targeting_skill = false
+
 	target_tiles.clear()
+	targeting_skill = false
 	current_action = Action.NONE
-	if energy == 0 && !free_movement:
-		end_turn()
 	
 func calculate_move_range(unit: Unit):
 	clear_move_range()
@@ -304,10 +295,11 @@ func show_affected_tiles(target_positions: Array[Vector2i]):
 			continue
 		tiles[target].set_attack_warning()
 	
-func handle_move_pressed(): 
+func handle_move_pressed(is_skill = false): 
 	if active_unit == null:
 		return
-	clean_up_skill()
+	if not is_skill:
+		clean_up_skill()
 	clear_move_range()
 	current_action = Action.MOVE
 	calculate_move_range(active_unit)
@@ -315,10 +307,12 @@ func handle_move_pressed():
 func handle_skill_pressed(skill_number: int, action: Action):
 	if active_unit == null:
 		return
-	clear_move_range()
-	current_action = action
-	targeting_skill = true
+	if active_skill:
+		active_skill.cancel(self, active_unit)
+	clear_skill_state()
 	active_skill = active_unit.skills[skill_number]
+	current_action = action
+	active_skill.begin(self, active_unit)
 			
 func get_direction_to_mouse(unit: Unit) -> Vector2i:
 	var mouse_pos := get_global_mouse_position()
@@ -372,6 +366,7 @@ func execute_skill():
 	show_affected_tiles(target_positions)
 	await get_tree().create_timer(0.5).timeout
 	await active_skill.execute(self, active_unit, target_positions, locked_skill_direction, locked_distance)
+	print("shii")
 	energy -= 1
 	unit_panel.update_energy(energy)
 	clean_up_skill()

@@ -1,8 +1,39 @@
 extends Skill
 class_name Rend
 
-func instant_cast() -> bool:
-	return true
+func begin(grid_field: GridField, unit: Unit) -> void:
+	var is_ally_archer := unit in grid_field.player_units
+	var enemies := grid_field.enemy_units if is_ally_archer else grid_field.player_units
+	var allies := grid_field.player_units if is_ally_archer else grid_field.enemy_units
+	grid_field.target_tiles.clear()
+	#Enemies marks
+	for target in enemies:
+		var stacks := target.get_status_stacks(Unit.EFFECTS.ENEMY_ARCHER_MARK)
+		if stacks <= 0:
+			continue
+		var tile = grid_field.tiles[target.grid_position]
+		tile.set_attackable(true)
+		grid_field.target_tiles.append(tile)
+	
+	#Allies marks
+	for target in allies:
+		var stacks := target.get_status_stacks(Unit.EFFECTS.ALLY_ARCHER_MARK)
+		if stacks <= 0:
+			continue
+		var tile = grid_field.tiles[target.grid_position]
+		tile.set_attackable(true)
+		grid_field.target_tiles.append(tile)
+
+func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
+	if not grid_field.tiles.has(pos):
+		return
+	if grid_field.tiles[pos] not in grid_field.target_tiles:
+		return
+	await execute(grid_field, unit, [], Vector2i.ZERO, 1)
+	grid_field.energy -= 1
+	grid_field.unit_panel.update_energy(grid_field.energy)
+	grid_field.clean_up_skill()
+	grid_field.unit_panel.clear_skill_active()
 
 func execute(
 	grid_field: GridField,
