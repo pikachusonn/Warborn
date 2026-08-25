@@ -118,8 +118,13 @@ func update_hp_bar():
 func take_damage(amount: int):
 	current_health -= amount;
 	current_health = max(current_health, 0)
-	print(data.unit_name, " took ", amount, " damage. HP: ", current_health)
 
+func heal(amount: int):
+	print('pre-heal: ', current_health)
+	current_health += amount;
+	current_health = min(current_health, data.health)
+	print(data.unit_name, " healed ", amount, " HP. HP: ", current_health)
+	
 func set_hovered(hovered: bool):
 	hp_bar.visible = hovered
 	if(hovered):
@@ -145,7 +150,7 @@ func add_status(status: String, stacks: int = 1):
 func remove_status(status: String):
 	status_effects.erase(status)
 	update_status_icons()
-
+	
 func has_status(status: String) -> bool:
 	return status_effects.has(status)
 

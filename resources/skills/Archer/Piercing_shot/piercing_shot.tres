@@ -5,6 +5,6 @@
 [resource]
 script = ExtResource("1_qm77m")
 skill_name = "Piercing Shot"
-damage = 20
+damage = 15
 is_projectile = true
 metadata/_custom_type_script = "uid://cw18ymvyrng4w"

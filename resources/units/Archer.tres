@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://drnl62itlgxtu" path="res://resources/skill.gd" id="2_h8rfp"]
 [ext_resource type="Texture2D" uid="uid://4bt8xfphbsq2" path="res://assets/archer_texture.jpg" id="2_iixvf"]
 [ext_resource type="Resource" uid="uid://lxctbg3qepep" path="res://resources/skills/Archer/Piercing_shot/piercing_shot.tres" id="3_fnwy5"]
+[ext_resource type="Resource" uid="uid://m2wo6ai8fpm7" path="res://resources/skills/Archer/Rend/rend.tres" id="4_fnwy5"]
 
 [resource]
 script = ExtResource("1_vp7m1")
@@ -16,5 +17,5 @@ skill1_name = "Piercing Shot"
 skill2_name = "Retreating Shot"
 skill3_name = "Back Shot"
 skill4_name = "Rend"
-skills = Array[ExtResource("2_h8rfp")]([ExtResource("3_fnwy5")])
+skills = Array[ExtResource("2_h8rfp")]([ExtResource("3_fnwy5"), ExtResource("4_fnwy5"), ExtResource("4_fnwy5"), ExtResource("4_fnwy5")])
 metadata/_custom_type_script = "uid://h8whgw5dvdue"

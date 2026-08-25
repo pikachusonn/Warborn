@@ -231,14 +231,8 @@ func handle_tile_clicked(pos: Vector2i):
 			move_unit(active_unit, pos)
 			current_action = Action.NONE
 			unit_panel.clear_skill_active()
-		Action.SKILL1:
+		_:
 			execute_skill()
-		Action.SKILL2:
-			execute_skill()
-		Action.SKILL3:
-			execute_skill()
-		Action.SKILL4:
-			print("Skill 4")
 	
 func update_unit_visuals():
 	for unit in turn_order:

@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="Rend" format=3 uid="uid://m2wo6ai8fpm7"]
+
+[ext_resource type="Script" uid="uid://cu7s7oqyudsje" path="res://resources/skills/Archer/Rend/rend.gd" id="1_bi1hm"]
+
+[resource]
+script = ExtResource("1_bi1hm")
+skill_name = "Rend"
+damage = 10
+metadata/_custom_type_script = "uid://cu7s7oqyudsje"
