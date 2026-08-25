@@ -1,8 +1,11 @@
 [gd_scene format=3 uid="uid://bqt31smdktycp"]
 
+[ext_resource type="Script" uid="uid://cj1gnr5os080w" path="res://scenes/status_tooltip/satus_tooltip.gd" id="1_xrv0h"]
+
 [node name="SatusTooltip" type="Control" unique_id=16554530]
 layout_mode = 3
 anchors_preset = 0
+script = ExtResource("1_xrv0h")
 
 [node name="PanelContainer" type="PanelContainer" parent="." unique_id=982666417]
 layout_mode = 0

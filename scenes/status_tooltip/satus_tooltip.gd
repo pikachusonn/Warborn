@@ -1,11 +1,20 @@
 extends Control
+class_name StatusTooltip
 
+@onready var name_label: Label = $PanelContainer/VBoxContainer/Label
+@onready var description_label: Label = $PanelContainer/VBoxContainer/Description
 
-# Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	pass # Replace with function body.
+	hide()
 
+func show_status(
+	status_name: String,
+	stack: int,
+	description: String
+) -> void:
+	name_label.text = status_name + " (" + str(stack) + ")"
+	description_label.text = description
+	show()
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass
+func hide_status() -> void:
+	hide()

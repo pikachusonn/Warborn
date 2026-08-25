@@ -14,24 +14,32 @@ const EFFECTS = {
 
 @export var data: UnitData
 @export var skills: Array[Skill]
+@export var status_tooltip_scene: PackedScene
+
 var side: Side
 var current_health: int
 var grid_position: Vector2i
 var is_selected := false
 var status_effects: Dictionary = {}
+var status_tooltip: StatusTooltip
 
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var click_area: UnitClickArea = $ClickArea
 @onready var hp_bar: ProgressBar = $HPBar
-@onready var ally_archer_mark: TextureRect = $StatusEffects/HunterMark
-@onready var enemy_archer_mark: TextureRect = $StatusEffects/EnemyHunterMark
-@onready var stun_icon: TextureRect = $StatusEffects/Stun
+@onready var ally_archer_mark: status_effect_icon = $StatusEffects/HunterMark
+@onready var enemy_archer_mark: status_effect_icon = $StatusEffects/EnemyHunterMark
+@onready var stun_icon: status_effect_icon = $StatusEffects/Stun
 @onready var effects_wrapper: HBoxContainer = $StatusEffects
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	hp_bar.hide()
 	effects_wrapper.set_position(Vector2i(-32, -52))
+	status_tooltip = status_tooltip_scene.instantiate()
+	add_child(status_tooltip)
+	ally_archer_mark.setup(status_tooltip, self)
+	enemy_archer_mark.setup(status_tooltip, self)
+	stun_icon.setup(status_tooltip, self)
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
 	pass
@@ -142,6 +150,7 @@ func has_status(status: String) -> bool:
 	return status_effects.has(status)
 
 func get_status_stacks(status: String) -> int:
+	print(status_effects)
 	return status_effects.get(status, 0)
 	
 func deduct_status_stack(status: String):

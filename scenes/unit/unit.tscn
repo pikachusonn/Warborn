@@ -1,8 +1,10 @@
 [gd_scene format=3 uid="uid://cffgbp01ruk46"]
 
 [ext_resource type="Script" uid="uid://da2w81nacfn1n" path="res://scenes/unit/unit.gd" id="1_btf8p"]
+[ext_resource type="PackedScene" uid="uid://bqt31smdktycp" path="res://scenes/status_tooltip/satus_tooltip.tscn" id="2_0wuuu"]
 [ext_resource type="Script" uid="uid://fulmk8ic34f1" path="res://scenes/unit/click_area.gd" id="2_fvc8g"]
 [ext_resource type="Texture2D" uid="uid://b0uap2k1ob6bu" path="res://assets/icons/arrow-icon.svg" id="3_bhlit"]
+[ext_resource type="Script" uid="uid://d1pdgypiav27d" path="res://scenes/unit/status_effect_icon.gd" id="4_0wuuu"]
 [ext_resource type="Texture2D" uid="uid://bai5l6043fr5p" path="res://assets/icons/enemy-arrow-icon.svg" id="4_3po7s"]
 [ext_resource type="Texture2D" uid="uid://7ylb5j5kujol" path="res://assets/icons/stun-icon.svg" id="4_vgvef"]
 
@@ -14,6 +16,7 @@ bg_color = Color(0.40392157, 0.7372549, 0.28235295, 1)
 
 [node name="Unit" type="Node2D" unique_id=1432069053]
 script = ExtResource("1_btf8p")
+status_tooltip_scene = ExtResource("2_0wuuu")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1720556451]
 
@@ -51,6 +54,10 @@ custom_minimum_size = Vector2(15, 15)
 custom_maximum_size = Vector2(15, 15)
 layout_mode = 2
 texture = ExtResource("3_bhlit")
+script = ExtResource("4_0wuuu")
+status_name = "Ally hunter mark"
+description = "Heal for 5HP/1 mark when the marks are detonated by ally archer"
+status_id = "ally_archer_mark"
 
 [node name="EnemyHunterMark" type="TextureRect" parent="StatusEffects" unique_id=1531387943]
 visible = false
@@ -58,6 +65,10 @@ custom_minimum_size = Vector2(15, 15)
 custom_maximum_size = Vector2(15, 15)
 layout_mode = 2
 texture = ExtResource("4_3po7s")
+script = ExtResource("4_0wuuu")
+status_name = "Enemy archer mark"
+description = "Deals 10 damage/1 mark when detonated by enemy archer"
+status_id = "enemy_archer_mark"
 
 [node name="Stun" type="TextureRect" parent="StatusEffects" unique_id=796217377]
 visible = false
@@ -65,3 +76,5 @@ custom_minimum_size = Vector2(15, 15)
 custom_maximum_size = Vector2(15, 15)
 layout_mode = 2
 texture = ExtResource("4_vgvef")
+script = ExtResource("4_0wuuu")
+status_id = "stunned"
