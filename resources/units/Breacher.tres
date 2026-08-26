@@ -10,7 +10,6 @@
 [resource]
 script = ExtResource("1_qs8mr")
 unit_name = "Breacher"
-mobility = 2
 speed = 3
 texture = ExtResource("2_vh5x3")
 skill1_name = "Cleave"

@@ -81,6 +81,12 @@ func set_active(active: bool):
 		sprite.modulate = Color.WHITE
 	else:
 		sprite.modulate = Color(0.4, 0.4, 0.4)
+	
+func set_attackable():
+	sprite.modulate = Color(1.0, 0.631, 0.61, 1.0)
+
+func set_heal():
+	sprite.modulate = Color(0.746, 0.982, 0.593, 1.0)
 		
 func set_selected(selected: bool):
 	is_selected = selected

@@ -41,6 +41,7 @@ var locked_skill_direction: Vector2i
 var skill_preview_nodes: Array[Node] = []
 var current_action := Action.NONE
 var projectile_blockers: Dictionary = {}
+var bouncing_pads: Dictionary[Vector2i, Hunter_kit] = {}
 enum Action {
 	MOVE,
 	SKILL1,
@@ -107,7 +108,7 @@ func _process(_delta: float) -> void:
 			hovered_unit.set_hovered(false)
 			hovered_unit = null
 		return
-	if active_skill and active_unit:
+	if active_skill and active_unit and targeting_skill:
 		active_skill.update_preview(self, active_unit)
 	var tile = tiles[grid_pos]
 	if tile == hovered_tile:
@@ -187,6 +188,7 @@ func move_unit(unit: Unit, target_pos: Vector2i):
 		end_turn()
 		
 func end_turn():
+	clear_skill_state()
 	active_unit.set_selected(false)
 	active_unit = null
 	unit_panel.hide()
@@ -249,7 +251,7 @@ func clear_skill_state():
 	targeting_skill = false
 	current_action = Action.NONE
 	
-func calculate_move_range(unit: Unit):
+func calculate_move_range(unit: Unit, diagonal = false):
 	clear_move_range()
 	var current_pos := unit.grid_position
 	var mobility := unit.data.mobility
@@ -260,6 +262,14 @@ func calculate_move_range(unit: Unit):
 		Vector2i.LEFT,
 		Vector2i.RIGHT
 	]
+	
+	if diagonal:
+		directions.append_array([
+			Vector2i(1, 1),   # down-right
+			Vector2i(-1, 1),  # down-left
+			Vector2i(1, -1),  # up-right
+			Vector2i(-1, -1)  # up-left
+		])
 	
 	for direction in directions:
 		for step in range(1, mobility + 1):
@@ -314,15 +324,35 @@ func handle_skill_pressed(skill_number: int, action: Action):
 	current_action = action
 	active_skill.begin(self, active_unit)
 			
-func get_direction_to_mouse(unit: Unit) -> Vector2i:
+func get_direction_to_mouse(unit: Unit, diagonal = false) -> Vector2i:
 	var mouse_pos := get_global_mouse_position()
 	var unit_pos := unit.global_position
 	var delta := mouse_pos - unit_pos
-
-	if abs(delta.x) > abs(delta.y):
-		return Vector2i.RIGHT if delta.x > 0 else Vector2i.LEFT
+	# Normal 4-direction aiming
+	if not diagonal:
+		if abs(delta.x) > abs(delta.y):
+			return Vector2i.RIGHT if delta.x > 0 else Vector2i.LEFT
+		else:
+			return Vector2i.DOWN if delta.y > 0 else Vector2i.UP
+	
+	# 8-direction aiming
+	var angle := delta.angle()
+	if angle >= -PI / 8 and angle < PI / 8:
+		return Vector2i.RIGHT
+	elif angle >= PI / 8 and angle < 3 * PI / 8:
+		return Vector2i(1, 1)
+	elif angle >= 3 * PI / 8 and angle < 5 * PI / 8:
+		return Vector2i.DOWN
+	elif angle >= 5 * PI / 8 and angle < 7 * PI / 8:
+		return Vector2i(-1, 1)
+	elif angle >= 7 * PI / 8 or angle < -7 * PI / 8:
+		return Vector2i.LEFT
+	elif angle >= -7 * PI / 8 and angle < -5 * PI / 8:
+		return Vector2i(-1, -1)
+	elif angle >= -5 * PI / 8 and angle < -3 * PI / 8:
+		return Vector2i.UP
 	else:
-		return Vector2i.DOWN if delta.y > 0 else Vector2i.UP
+		return Vector2i(1, -1)
 
 func get_skill_distance(unit: Unit) -> int:
 	var mouse_pos := get_global_mouse_position()
@@ -338,40 +368,6 @@ func get_units_on_tiles(target_positions: Array[Vector2i], units: Array[Unit]) -
 			targets.append(unit)
 	return targets
 	
-func execute_skill():
-	if energy <= 0:
-		return
-	if not active_skill or not active_unit:
-		return
-	locked_skill_direction = get_direction_to_mouse(active_unit)
-	var locked_distance = get_skill_distance(active_unit)
-	var target_positions: Array[Vector2i] = active_skill.get_target_tiles(
-		self,
-		active_unit,
-		locked_skill_direction,
-		locked_distance
-	)
-	targeting_skill = false
-	show_locked_tiles(target_positions)
-	await get_tree().create_timer(0.5).timeout
-	if(active_skill.cutscene_texture):
-		show_skill_cutscene(active_skill.cutscene_texture)
-		await get_tree().create_timer(1).timeout
-	if(active_skill.cutscene_video):
-		var cutscene_player = show_skill_cutscene_video(active_skill.cutscene_video)
-		await get_tree().create_timer(3).timeout
-		cutscene_player.stop()
-		cutscene_player.stream = null
-	skill_cutscene.hide()
-	show_affected_tiles(target_positions)
-	await get_tree().create_timer(0.5).timeout
-	await active_skill.execute(self, active_unit, target_positions, locked_skill_direction, locked_distance)
-	print("shii")
-	energy -= 1
-	unit_panel.update_energy(energy)
-	clean_up_skill()
-	unit_panel.clear_skill_active()
-
 func show_skill_cutscene(texture: Texture2D):
 	skill_cutscene.get_node("TextureRect").texture = texture
 	skill_cutscene.show()
@@ -382,6 +378,24 @@ func show_skill_cutscene_video(video: VideoStream):
 	video_player.play()
 	skill_cutscene.show()
 	return video_player
+
+func play_skill_presentation(
+	skill: Skill,
+	target_positions: Array[Vector2i]
+) -> void:
+	show_locked_tiles(target_positions)
+	await get_tree().create_timer(0.5).timeout
+	if skill.cutscene_texture:
+		show_skill_cutscene(skill.cutscene_texture)
+		await get_tree().create_timer(1.0).timeout
+	if skill.cutscene_video:
+		var cutscene_player = show_skill_cutscene_video(skill.cutscene_video)
+		await get_tree().create_timer(3.0).timeout
+		cutscene_player.stop()
+		cutscene_player.stream = null
+	skill_cutscene.hide()
+	show_affected_tiles(target_positions)
+	await get_tree().create_timer(0.5).timeout
 	
 func start_combat():
 	initialize_turn_order()
@@ -421,3 +435,15 @@ func get_projectile_blocker(tile: Vector2i, unit: Unit):
 	if unit in (player_units if blocker.owner in player_units else enemy_units):
 		return null
 	return blocker
+
+func get_tile_center(pos: Vector2i) -> Vector2:
+	return tiles[pos].global_position + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0)
+	
+func add_bouncing_pad(pos: Vector2i, pad: Hunter_kit) -> void:
+	bouncing_pads[pos] = pad
+
+func remove_bouncing_pad(pos: Vector2i) -> void:
+	bouncing_pads.erase(pos)
+
+func get_bouncing_pad(pos: Vector2i) -> Hunter_kit:
+	return bouncing_pads.get(pos, null)
