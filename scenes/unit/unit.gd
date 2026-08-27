@@ -68,7 +68,7 @@ func setup(pos: Vector2i, unit_data: UnitData, unit_side):
 		64.0 / tex_size.x,
 		64.0 / tex_size.y
 	)
-	sprite.scale = Vector2.ONE * scale_factor * 2
+	sprite.scale = Vector2.ONE * scale_factor * 1.8
 	
 func set_active(active: bool):
 	if active:

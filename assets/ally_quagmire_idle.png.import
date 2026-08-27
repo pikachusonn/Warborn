@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c53eny0cicohm"
-path="res://.godot/imported/quagmire_ally_idle.png-1ba0925b438d94ea0e540ebdc283cb8c.ctex"
+uid="uid://o5462qxmacjk"
+path="res://.godot/imported/ally_quagmire_idle.png-333c1520d66bfdcef23a29d1d3346509.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/quagmire_ally_idle.png"
-dest_files=["res://.godot/imported/quagmire_ally_idle.png-1ba0925b438d94ea0e540ebdc283cb8c.ctex"]
+source_file="res://assets/ally_quagmire_idle.png"
+dest_files=["res://.godot/imported/ally_quagmire_idle.png-333c1520d66bfdcef23a29d1d3346509.ctex"]
 
 [params]
 

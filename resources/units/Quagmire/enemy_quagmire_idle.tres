@@ -1,0 +1,53 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://cloamcskjtqaw"]
+
+[ext_resource type="Texture2D" uid="uid://crwmrn4cgu8gm" path="res://assets/enemy_quagmire_idle.png" id="1_ksr51"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8l0r6"]
+atlas = ExtResource("1_ksr51")
+region = Rect2(0, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_f2dnw"]
+atlas = ExtResource("1_ksr51")
+region = Rect2(362, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mxnsy"]
+atlas = ExtResource("1_ksr51")
+region = Rect2(724, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_l8xxq"]
+atlas = ExtResource("1_ksr51")
+region = Rect2(1086, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qtfdh"]
+atlas = ExtResource("1_ksr51")
+region = Rect2(1448, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_88spv"]
+atlas = ExtResource("1_ksr51")
+region = Rect2(1810, 0, 362, 724)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_8l0r6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_f2dnw")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_mxnsy")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_l8xxq")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qtfdh")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_88spv")
+}],
+"loop": 1,
+"name": &"idle",
+"speed": 5.0
+}]

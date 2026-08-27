@@ -20,6 +20,7 @@ var enemy_units: Array[Unit] = []
 @export var unit_scene: PackedScene
 @export var breacher_data: UnitData
 @export var archer_data: UnitData
+@export var quagmire_data: UnitData
 # ================================
 # TURN
 # ================================
@@ -65,24 +66,34 @@ func _ready() -> void:
 	players_characters = [
 		{
 			"data": breacher_data,
-			"position": Vector2i(6, 9),
+			"position": Vector2i(6, 8),
 			"side": Unit.Side.PLAYER
 		},
 		{
 			"data": archer_data,
 			"position": Vector2i(4, 9),
 			"side": Unit.Side.PLAYER
+		},
+		{
+			"data": quagmire_data,
+			"position": Vector2i(8, 9),
+			"side": Unit.Side.PLAYER
 		}
 	]
 	enemies_characters = [
 		{
 			"data": breacher_data,
-			"position": Vector2i(5, 0),
+			"position": Vector2i(3, 1),
 			"side": Unit.Side.ENEMY
 		},
 		{
 			"data": archer_data,
-			"position": Vector2i(7, 0),
+			"position": Vector2i(5, 0),
+			"side": Unit.Side.ENEMY
+		},
+		{
+			"data": quagmire_data,
+			"position": Vector2i(1, 0),
 			"side": Unit.Side.ENEMY
 		}
 	]

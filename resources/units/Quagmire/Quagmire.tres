@@ -1,13 +1,17 @@
 [gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://cuxuirgbkvn5a"]
 
 [ext_resource type="Script" uid="uid://h8whgw5dvdue" path="res://resources/unit_data.gd" id="1_u42s6"]
+[ext_resource type="SpriteFrames" uid="uid://dkcesl5e78cm7" path="res://resources/units/Quagmire/ally_quagmire_idle.tres" id="1_ylexl"]
 [ext_resource type="Script" uid="uid://drnl62itlgxtu" path="res://resources/skill.gd" id="2_a5jun"]
+[ext_resource type="SpriteFrames" uid="uid://cloamcskjtqaw" path="res://resources/units/Quagmire/enemy_quagmire_idle.tres" id="2_ar63t"]
 [ext_resource type="Resource" uid="uid://dctm5xx3ycyva" path="res://resources/skills/Quagmire/Mud Pillar/mud_pillar.tres" id="3_a5jun"]
 
 [resource]
 script = ExtResource("1_u42s6")
 health = 70
 damage = 5
+ally_sprite_frames = ExtResource("1_ylexl")
+enemy_sprite_frames = ExtResource("2_ar63t")
 skill1_name = "Mud Pillar"
 skill2_name = "Quagmire"
 skill3_name = "Eruption"
