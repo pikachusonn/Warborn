@@ -7,6 +7,9 @@ class_name Skill
 @export var cutscene_video: VideoStream
 @export var is_projectile: bool
 
+@export var cooldown: int = 0
+var cooldown_remaining: int = 0
+
 func begin(grid_field: GridField, unit: Unit):
 	pass
 	

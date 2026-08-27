@@ -56,7 +56,7 @@ func _on_end_turn_pressed():
 	
 func show_unit(unit: Unit):
 	show()
-	portrait.texture = unit.data.texture
+	portrait.texture = unit.sprite.sprite_frames.get_frame_texture("idle", 0)
 	hp_bar.max_value = unit.data.health
 	hp_bar.value = unit.current_health
 	skill1_button.text = unit.data.skill1_name

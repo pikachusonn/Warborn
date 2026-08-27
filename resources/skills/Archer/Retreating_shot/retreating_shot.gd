@@ -14,6 +14,7 @@ func begin(grid_field: GridField, unit: Unit) -> void:
 	grid_field.calculate_move_range(unit, true)
 	
 func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
+	cooldown_remaining = cooldown
 	match stage:
 		Stage.MOVE:
 			handle_move_stage(grid_field, unit, pos)
@@ -46,3 +47,7 @@ func cancel(grid_field: GridField, unit: Unit) -> void:
 	if piercing_shot:
 		piercing_shot.cancel(grid_field, unit)
 	stage = Stage.MOVE
+
+func on_owner_turn_start(grid: GridField):
+	if cooldown_remaining > 0:
+		cooldown_remaining -= 1

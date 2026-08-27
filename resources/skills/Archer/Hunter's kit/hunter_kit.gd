@@ -5,7 +5,6 @@ var deployed := false
 var pad_position: Vector2i
 var owner: Unit = null
 
-var cooldown := 0
 var pad_visual: Polygon2D = null
 
 func begin(
@@ -46,7 +45,7 @@ func deploy_pad(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 	deployed = true
 	pad_position = pos
 	owner = unit
-	cooldown = 3
+	cooldown_remaining = cooldown
 	create_pad_visual(grid_field)
 	grid_field.add_bouncing_pad(pad_position, self)
 	# Initial deployment costs the action
@@ -81,12 +80,12 @@ func reposition_pad(
 	grid_field: GridField,
 	pos: Vector2i
 ) -> void:
-	if cooldown > 0:
+	if cooldown_remaining > 0:
 		return
 	grid_field.remove_bouncing_pad(pad_position)
 	pad_position = pos
 	grid_field.add_bouncing_pad(pad_position, self)
-	cooldown = 3
+	cooldown_remaining = 3
 	create_pad_visual(grid_field)
 	# NO energy deduction
 	grid_field.clean_up_skill()
@@ -113,3 +112,9 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 	if grid_field.tiles[pos] not in grid_field.target_tiles:
 		return
 	await execute(grid_field, unit, [pos], Vector2i.ZERO, 1)
+	
+func on_owner_turn_start(_grid: GridField) -> void:
+	if not deployed:
+		return
+	if cooldown_remaining > 0:
+		cooldown_remaining -= 1

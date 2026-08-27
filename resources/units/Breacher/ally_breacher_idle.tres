@@ -1,0 +1,67 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://u2iv1fv521tx"]
+
+[ext_resource type="Texture2D" uid="uid://dj0pievb8qg08" path="res://assets/breacher_idle.png" id="1_q0y2y"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vw4ie"]
+atlas = ExtResource("1_q0y2y")
+region = Rect2(0, 0, 192, 192)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_dcekq"]
+atlas = ExtResource("1_q0y2y")
+region = Rect2(192, 0, 192, 192)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_td1jy"]
+atlas = ExtResource("1_q0y2y")
+region = Rect2(384, 0, 192, 192)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_m454w"]
+atlas = ExtResource("1_q0y2y")
+region = Rect2(576, 0, 192, 192)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_7fd2s"]
+atlas = ExtResource("1_q0y2y")
+region = Rect2(768, 0, 192, 192)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_j1ubj"]
+atlas = ExtResource("1_q0y2y")
+region = Rect2(960, 0, 192, 192)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_uqo7d"]
+atlas = ExtResource("1_q0y2y")
+region = Rect2(1152, 0, 192, 192)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vp14c"]
+atlas = ExtResource("1_q0y2y")
+region = Rect2(1344, 0, 192, 192)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_vw4ie")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_dcekq")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_td1jy")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_m454w")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_7fd2s")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_j1ubj")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_uqo7d")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_vp14c")
+}],
+"loop": 1,
+"name": &"idle",
+"speed": 16.0
+}]

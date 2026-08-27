@@ -6,4 +6,5 @@
 [resource]
 script = ExtResource("1_jqbyu")
 piercing_shot = ExtResource("1_h3urs")
+cooldown = 1
 metadata/_custom_type_script = "uid://cyuw13xq12ks2"

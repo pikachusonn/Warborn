@@ -14,6 +14,7 @@ const EFFECTS = {
 
 @export var data: UnitData
 @export var skills: Array[Skill]
+@export var cooldown: int
 @export var status_tooltip_scene: PackedScene
 
 var side: Side
@@ -23,7 +24,9 @@ var is_selected := false
 var status_effects: Dictionary = {}
 var status_tooltip: StatusTooltip
 
-@onready var sprite: Sprite2D = $Sprite2D
+@onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
+@export var ally_sprite_frames: SpriteFrames
+@export var enemy_sprite_frames: SpriteFrames
 @onready var click_area: UnitClickArea = $ClickArea
 @onready var hp_bar: ProgressBar = $HPBar
 @onready var ally_archer_mark: status_effect_icon = $StatusEffects/HunterMark
@@ -53,28 +56,19 @@ func setup(pos: Vector2i, unit_data: UnitData, unit_side):
 		skills.append(skill_copy)
 	side = unit_side
 	current_health = data.health
-	sprite.texture = data.texture
+	if side == Side.PLAYER:
+		sprite.sprite_frames = data.ally_sprite_frames
+	else:
+		sprite.sprite_frames = data.enemy_sprite_frames
 	position = Vector2(pos) * 64 + Vector2(32, 32)
-	
-	var tex_size = sprite.texture.get_size()
-
-	var scale_factor = max(
+	sprite.play("idle")
+	var frame_texture := sprite.sprite_frames.get_frame_texture("idle", 0)
+	var tex_size := frame_texture.get_size()
+	var scale_factor = min(
 		64.0 / tex_size.x,
 		64.0 / tex_size.y
 	)
-
-	sprite.scale = Vector2.ONE * scale_factor
-	sprite.region_enabled = true
-
-	var visible_width = 64.0 / scale_factor
-	var visible_height = 64.0 / scale_factor
-
-	sprite.region_rect = Rect2(
-		(tex_size.x - visible_width) / 2.0,
-		(tex_size.y - visible_height) / 2.0,
-		visible_width,
-		visible_height
-	)
+	sprite.scale = Vector2.ONE * scale_factor * 2
 	
 func set_active(active: bool):
 	if active:

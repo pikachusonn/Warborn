@@ -4,7 +4,5 @@
 
 [resource]
 script = ExtResource("1_tcx81")
-skill_name = null
-damage = null
-is_projectile = null
+cooldown = 2
 metadata/_custom_type_script = "uid://b1bbbeask7wb5"

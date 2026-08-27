@@ -13,7 +13,7 @@ func update_preview(
 	grid_field: GridField,
 	unit: Unit
 ) -> void:
-	var direction := grid_field.get_direction_to_mouse(unit)
+	var direction := grid_field.get_direction_to_mouse(unit.global_position)
 	var distance := grid_field.get_skill_distance(unit)
 
 	grid_field.show_attack_range(
@@ -29,7 +29,7 @@ func on_tile_clicked(
 	unit: Unit,
 	pos: Vector2i
 ) -> void:
-	var direction := grid_field.get_direction_to_mouse(unit)
+	var direction := grid_field.get_direction_to_mouse(unit.global_position)
 	var distance := grid_field.get_skill_distance(unit)
 
 	var target_positions := get_target_tiles(
@@ -129,69 +129,52 @@ func get_displacement_direction(
 		else:
 			return Vector2i.RIGHT
 		
-func execute(
-	grid: GridField,
-	unit: Unit,
-	target_positions: Array[Vector2i],
-	direction: Vector2i,
-	distance: int
-) -> void:
-	var units = (
-		grid.enemy_units
-		if unit in grid.player_units
-		else grid.player_units
-	)
-
-	var destination := unit.grid_position
-
-	for step in range(1, distance + 1):
-		var next_position := destination + direction
-
-		if not grid.tiles.has(next_position):
+func execute(grid: GridField, unit: Unit, target_positions: Array[Vector2i], direction: Vector2i, distance: int) -> void:
+	var units = grid.enemy_units if unit in grid.player_units else grid.player_units
+	var start_position := unit.grid_position
+	var destination := start_position + direction * distance
+	# Pull destination back until it is inside the board.
+	while not grid.tiles.has(destination) and destination != start_position:
+		destination -= direction
+	var targets := grid.get_units_on_tiles(target_positions, units)
+	# Find a head-on target.
+	var head_on_target: Unit = null
+	for target in targets:
+		var displacement := get_displacement_direction_from_position(start_position, target, direction)
+		if displacement == direction:
+			head_on_target = target
 			break
-
-		var units_on_next_tile := grid.get_units_on_tiles(
-			[next_position],
-			units
-		)
-
-		if not units_on_next_tile.is_empty():
-			break
-
-		destination = next_position
+	# If Breacher would land on the enemy's current tile,
+	# stop one tile before it.
+	if head_on_target and destination == head_on_target.grid_position:
+		destination -= direction
 
 	unit.grid_position = destination
-	unit.global_position = (
-		grid.tiles[destination].global_position
-		+ Vector2(32, 32)
-	)
-
-	var targets := grid.get_units_on_tiles(
-		target_positions,
-		units
-	)
-
+	unit.global_position = grid.tiles[destination].global_position + Vector2(32, 32)
 	for target in targets:
 		target.take_damage(damage)
-
-		var displacement := get_displacement_direction(
-			unit,
-			target,
-			direction
-		)
-
+		var displacement := get_displacement_direction_from_position(start_position, target, direction)
 		var new_position: Vector2i
-
 		if displacement == direction:
-			new_position = target.grid_position + direction
+			# Head-on targets are launched 2 tiles beyond Breacher's landing position.
+			new_position = destination + direction * 2
 		else:
 			new_position = target.grid_position + displacement
-
 		if grid.tiles.has(new_position):
 			target.grid_position = new_position
-			target.global_position = (
-				grid.tiles[new_position].global_position
-				+ Vector2(32, 32)
-			)
-
+			target.global_position = grid.tiles[new_position].global_position + Vector2(32, 32)
 		target.shake()
+		
+func get_displacement_direction_from_position(start_position: Vector2i, target: Unit, direction: Vector2i) -> Vector2i:
+	if direction == Vector2i.UP or direction == Vector2i.DOWN:
+		if target.grid_position.x < start_position.x:
+			return Vector2i.LEFT
+		elif target.grid_position.x > start_position.x:
+			return Vector2i.RIGHT
+		return direction
+
+	if target.grid_position.y < start_position.y:
+		return Vector2i.UP
+	elif target.grid_position.y > start_position.y:
+		return Vector2i.DOWN
+	return direction

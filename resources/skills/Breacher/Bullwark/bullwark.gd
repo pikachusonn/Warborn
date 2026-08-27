@@ -200,3 +200,13 @@ func on_owner_turn_start(
 	grid: GridField
 ) -> void:
 	clear_bulwark(grid)
+	
+func update_position(grid: GridField) -> void:
+	if owner == null:
+		return
+	if not is_instance_valid(active_shield):
+		return
+	var current_owner := owner
+	clear_bulwark(grid)
+	owner = current_owner
+	active_shield = create_shield_visual(grid, owner, true)

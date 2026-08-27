@@ -13,7 +13,7 @@ func update_preview(
 	grid_field: GridField,
 	unit: Unit
 ) -> void:
-	var direction := grid_field.get_direction_to_mouse(unit)
+	var direction := grid_field.get_direction_to_mouse(unit.global_position)
 
 	grid_field.show_attack_range(
 		self,
@@ -28,7 +28,7 @@ func on_tile_clicked(
 	unit: Unit,
 	pos: Vector2i
 ) -> void:
-	var direction := grid_field.get_direction_to_mouse(unit)
+	var direction := grid_field.get_direction_to_mouse(unit.global_position)
 	var target_positions := get_target_tiles(grid_field, unit, direction)
 	if not grid_field.tiles.has(pos):
 		return

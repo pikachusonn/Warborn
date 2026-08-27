@@ -7,7 +7,8 @@ class_name UnitData
 @export var mobility := 1
 @export var speed := 1
 
-@export var texture: Texture2D
+@export var ally_sprite_frames: SpriteFrames
+@export var enemy_sprite_frames: SpriteFrames
 
 @export var skill1_name: String
 @export var skill2_name: String

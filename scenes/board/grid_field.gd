@@ -107,6 +107,8 @@ func _process(_delta: float) -> void:
 		if hovered_unit:
 			hovered_unit.set_hovered(false)
 			hovered_unit = null
+		if targeting_skill and active_skill and active_unit:
+			active_skill.update_preview(self, active_unit)
 		return
 	if active_skill and active_unit and targeting_skill:
 		active_skill.update_preview(self, active_unit)
@@ -180,6 +182,9 @@ func move_unit(unit: Unit, target_pos: Vector2i):
 	
 	unit.grid_position = target_pos
 	unit.position = (Vector2(target_pos) * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2))
+	for skill in unit.skills:
+		if skill is Bullwark:
+			skill.update_position(self)
 	unit_panel.update_energy(energy)
 	clear_move_range()
 	#unit_panel.hide()
@@ -241,13 +246,15 @@ func clean_up_skill():
 	active_skill = null
 	if energy == 0 && !free_movement:
 		end_turn()
-		
-func clear_skill_state():
+
+func clear_target_tiles():
 	for tile in target_tiles:
 		tile.set_moveable(false)
 		tile.set_attackable(false)
-
 	target_tiles.clear()
+
+func clear_skill_state():
+	clear_target_tiles()
 	targeting_skill = false
 	current_action = Action.NONE
 	
@@ -317,17 +324,20 @@ func handle_move_pressed(is_skill = false):
 func handle_skill_pressed(skill_number: int, action: Action):
 	if active_unit == null:
 		return
+	var skill := active_unit.skills[skill_number]
+	if skill.cooldown_remaining > 0:
+		clear_skill_state()
+		return
 	if active_skill:
 		active_skill.cancel(self, active_unit)
 	clear_skill_state()
-	active_skill = active_unit.skills[skill_number]
+	active_skill = skill
 	current_action = action
 	active_skill.begin(self, active_unit)
 			
-func get_direction_to_mouse(unit: Unit, diagonal = false) -> Vector2i:
+func get_direction_to_mouse(position: Vector2, diagonal = false) -> Vector2i:
 	var mouse_pos := get_global_mouse_position()
-	var unit_pos := unit.global_position
-	var delta := mouse_pos - unit_pos
+	var delta := mouse_pos - position
 	# Normal 4-direction aiming
 	if not diagonal:
 		if abs(delta.x) > abs(delta.y):
@@ -413,6 +423,12 @@ func initialize_turn_order():
 
 func start_unit_turn(unit: Unit):
 	active_unit = unit
+	if unit.get_status_stacks(Unit.EFFECTS.STUNNED) > 0:
+		unit.remove_status(Unit.EFFECTS.STUNNED)
+		unit.shake()
+		await get_tree().create_timer(0.5).timeout
+		end_turn()
+		return
 	energy = 1
 	free_movement = true
 	active_unit.set_selected(true)
@@ -445,5 +461,10 @@ func add_bouncing_pad(pos: Vector2i, pad: Hunter_kit) -> void:
 func remove_bouncing_pad(pos: Vector2i) -> void:
 	bouncing_pads.erase(pos)
 
-func get_bouncing_pad(pos: Vector2i) -> Hunter_kit:
-	return bouncing_pads.get(pos, null)
+func get_bouncing_pad(pos: Vector2i, unit: Unit) -> Hunter_kit:
+	var pad: Hunter_kit = bouncing_pads.get(pos, null)
+	if pad == null:
+		return null
+	if unit in (player_units if pad.owner in player_units else enemy_units):
+		return pad
+	return null

@@ -3,8 +3,8 @@
 [ext_resource type="Script" uid="uid://b8rgsfkvdx747" path="res://scenes/board/grid_field.gd" id="1_mnn36"]
 [ext_resource type="PackedScene" uid="uid://dukxve13nyklg" path="res://scenes/tile/tile.tscn" id="2_7hqsk"]
 [ext_resource type="PackedScene" uid="uid://cffgbp01ruk46" path="res://scenes/unit/unit.tscn" id="3_7hqsk"]
-[ext_resource type="Resource" uid="uid://yhx05donnpb1" path="res://resources/units/Breacher.tres" id="4_vlvcf"]
-[ext_resource type="Resource" uid="uid://csplxy6uvqi7l" path="res://resources/units/Archer.tres" id="5_xmbel"]
+[ext_resource type="Resource" uid="uid://yhx05donnpb1" path="res://resources/units/Breacher/Breacher.tres" id="4_vlvcf"]
+[ext_resource type="Resource" uid="uid://csplxy6uvqi7l" path="res://resources/units/Archer/Archer.tres" id="5_xmbel"]
 [ext_resource type="PackedScene" uid="uid://cksexigk5bvbc" path="res://scenes/canvas_layer.tscn" id="6_4gtxg"]
 
 [node name="GridField" type="Node2D" unique_id=1515789650]

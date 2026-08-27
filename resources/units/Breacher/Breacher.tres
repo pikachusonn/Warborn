@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://yhx05donnpb1"]
+
+[ext_resource type="SpriteFrames" uid="uid://u2iv1fv521tx" path="res://resources/units/Breacher/ally_breacher_idle.tres" id="1_i4ty4"]
+[ext_resource type="SpriteFrames" uid="uid://cxswj02ccjfh" path="res://resources/units/Breacher/enemy_breacher_idle.tres" id="2_i4ty4"]
+[ext_resource type="Script" uid="uid://h8whgw5dvdue" path="res://resources/unit_data.gd" id="3_qol47"]
+[ext_resource type="Script" uid="uid://drnl62itlgxtu" path="res://resources/skill.gd" id="4_3thcy"]
+[ext_resource type="Resource" uid="uid://12lkk447ljij" path="res://resources/skills/Breacher/Cleave/cleave.tres" id="5_ijrve"]
+[ext_resource type="Resource" uid="uid://dfny7rv13qs12" path="res://resources/skills/Archer/Shield Bash/shield_bash.tres" id="6_xmydp"]
+[ext_resource type="Resource" uid="uid://ckrff83phrbt1" path="res://resources/skills/Breacher/Bullwark/bullwark.tres" id="7_uy7ek"]
+[ext_resource type="Resource" uid="uid://dkg37hi5k27ds" path="res://resources/skills/Breacher/Unstoppable_force/unstoppable_force.tres" id="8_ix43m"]
+
+[resource]
+script = ExtResource("3_qol47")
+unit_name = "Breacher"
+mobility = 2
+speed = 3
+ally_sprite_frames = ExtResource("1_i4ty4")
+enemy_sprite_frames = ExtResource("2_i4ty4")
+skill1_name = "Cleave"
+skill2_name = "Shield bash"
+skill3_name = "Bulwark"
+skill4_name = "Unstoppable force"
+skills = Array[ExtResource("4_3thcy")]([ExtResource("5_ijrve"), ExtResource("6_xmydp"), ExtResource("7_uy7ek"), ExtResource("8_ix43m")])
+metadata/_custom_type_script = "uid://h8whgw5dvdue"

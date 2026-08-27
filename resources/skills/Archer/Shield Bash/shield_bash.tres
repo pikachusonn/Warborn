@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="Shield_bash" format=3 uid="uid://dfny7rv13qs12"]
+
+[ext_resource type="Script" uid="uid://pjspwdh1ivbv" path="res://resources/skills/Archer/Shield Bash/shield_bash.gd" id="1_tiq0y"]
+
+[resource]
+script = ExtResource("1_tiq0y")
+skill_name = "Shield Bash"
+damage = 20
+cooldown = 2
+metadata/_custom_type_script = "uid://pjspwdh1ivbv"

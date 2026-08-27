@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="Mud_Pillar" format=3 uid="uid://dctm5xx3ycyva"]
+
+[ext_resource type="Script" uid="uid://mbfd4ki66daf" path="res://resources/skills/Quagmire/Mud Pillar/mud_pillar.gd" id="1_nxi1b"]
+
+[resource]
+script = ExtResource("1_nxi1b")
+metadata/_custom_type_script = "uid://mbfd4ki66daf"

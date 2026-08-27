@@ -8,6 +8,9 @@
 [ext_resource type="Texture2D" uid="uid://bai5l6043fr5p" path="res://assets/icons/enemy-arrow-icon.svg" id="4_3po7s"]
 [ext_resource type="Texture2D" uid="uid://7ylb5j5kujol" path="res://assets/icons/stun-icon.svg" id="4_vgvef"]
 
+[sub_resource type="SpriteFrames" id="SpriteFrames_0wuuu"]
+animations = []
+
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_vh40f"]
 size = Vector2(64, 64)
 
@@ -18,7 +21,9 @@ bg_color = Color(0.40392157, 0.7372549, 0.28235295, 1)
 script = ExtResource("1_btf8p")
 status_tooltip_scene = ExtResource("2_0wuuu")
 
-[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1720556451]
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=922020163]
+sprite_frames = SubResource("SpriteFrames_0wuuu")
+animation = &""
 
 [node name="ClickArea" type="Area2D" parent="." unique_id=950364755]
 script = ExtResource("2_fvc8g")
@@ -77,4 +82,6 @@ custom_maximum_size = Vector2(15, 15)
 layout_mode = 2
 texture = ExtResource("4_vgvef")
 script = ExtResource("4_0wuuu")
+status_name = "Stun"
+description = "Stunned, Unit skip the next turn"
 status_id = "stunned"

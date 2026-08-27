@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="UnitData" format=3 uid="uid://csplxy6uvqi7l"]
+
+[ext_resource type="SpriteFrames" uid="uid://b23w8d4rtq7kp" path="res://resources/units/Archer/ally_archer_idle.tres" id="1_it6hh"]
+[ext_resource type="SpriteFrames" uid="uid://b1e3c27umis04" path="res://resources/units/Archer/enemy_archer_idle.tres" id="2_6loji"]
+[ext_resource type="Script" uid="uid://h8whgw5dvdue" path="res://resources/unit_data.gd" id="3_m2o7s"]
+[ext_resource type="Script" uid="uid://drnl62itlgxtu" path="res://resources/skill.gd" id="4_idjcl"]
+[ext_resource type="Resource" uid="uid://lxctbg3qepep" path="res://resources/skills/Archer/Piercing_shot/piercing_shot.tres" id="5_ic4pd"]
+[ext_resource type="Resource" uid="uid://dygqk756v2hpm" path="res://resources/skills/Archer/Retreating_shot/retreating_shot.tres" id="6_gv2fe"]
+[ext_resource type="Resource" uid="uid://m2wo6ai8fpm7" path="res://resources/skills/Archer/Rend/rend.tres" id="7_d2obp"]
+[ext_resource type="Resource" uid="uid://s4jm66sghi8y" path="res://resources/skills/Archer/Hunter's kit/hunter_kit.tres" id="8_kpv8x"]
+
+[resource]
+script = ExtResource("3_m2o7s")
+unit_name = "Archer"
+health = 75
+damage = 5
+mobility = 2
+ally_sprite_frames = ExtResource("1_it6hh")
+enemy_sprite_frames = ExtResource("2_6loji")
+skill1_name = "Piercing Shot"
+skill2_name = "Retreating Shot"
+skill3_name = "Rend"
+skill4_name = "Hunter's kit"
+skills = Array[ExtResource("4_idjcl")]([ExtResource("5_ic4pd"), ExtResource("6_gv2fe"), ExtResource("7_d2obp"), ExtResource("8_kpv8x")])
+metadata/_custom_type_script = "uid://h8whgw5dvdue"
