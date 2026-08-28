@@ -6,4 +6,5 @@
 script = ExtResource("1_o7b0a")
 skill_name = "Unstoppable Force"
 damage = 10
+is_mobile = true
 metadata/_custom_type_script = "uid://wosjab2ra7o2"

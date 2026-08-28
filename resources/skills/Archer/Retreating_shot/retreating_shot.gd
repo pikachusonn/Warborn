@@ -9,6 +9,9 @@ var stage := Stage.MOVE
 @export var piercing_shot: Piercing_shot
 
 func begin(grid_field: GridField, unit: Unit) -> void:
+	if(grid_field.energy == 0):
+		grid_field.end_turn()
+		return
 	stage = Stage.MOVE
 	grid_field.clear_move_range()
 	grid_field.calculate_move_range(unit, true)

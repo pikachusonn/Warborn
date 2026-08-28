@@ -1,12 +1,13 @@
 extends Node2D
 class_name TileScene
 const TILE_SIZE := 64;
-@export var grid_position: Vector2i;
 var is_hovered := false;
-
 signal tile_clicked(position: Vector2i)
 
+@export var grid_position: Vector2i;
+
 @onready var clicked_area = $ClickArea
+@onready var quagmire_overlay: Polygon2D = $QuagmireOverlay
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -59,3 +60,9 @@ func clear_attack():
 		
 func _on_clicked():
 	tile_clicked.emit(grid_position)
+	
+func show_quagmire():
+	quagmire_overlay.visible = true
+
+func clear_quagmire():
+	quagmire_overlay.visible = false

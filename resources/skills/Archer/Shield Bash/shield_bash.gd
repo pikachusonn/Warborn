@@ -2,6 +2,9 @@ extends Skill
 class_name Shield_bash
 
 func begin(grid_field: GridField, _unit: Unit) -> void:
+	if(grid_field.energy == 0):
+		grid_field.end_turn()
+		return
 	grid_field.targeting_skill = true
 
 func update_preview(grid_field: GridField, unit: Unit) -> void:

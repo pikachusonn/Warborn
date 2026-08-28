@@ -14,6 +14,9 @@ func set_free_cast(value: bool) -> void:
 	free_cast = value
 
 func begin(grid_field: GridField, unit: Unit) -> void:
+	if(grid_field.energy == 0):
+		grid_field.end_turn()
+		return
 	stage = Stage.SHOT
 	grid_field.targeting_skill = true
 

@@ -85,3 +85,10 @@ script = ExtResource("4_0wuuu")
 status_name = "Stun"
 description = "Stunned, Unit skip the next turn"
 status_id = "stunned"
+
+[node name="SpeechBubble" type="PanelContainer" parent="." unique_id=885402778]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Label" type="Label" parent="SpeechBubble" unique_id=2103794658]
+layout_mode = 2

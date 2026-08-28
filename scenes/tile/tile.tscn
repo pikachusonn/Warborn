@@ -15,3 +15,8 @@ script = ExtResource("2_dvver")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="ClickArea" unique_id=26951783]
 position = Vector2(32, 32)
 shape = SubResource("RectangleShape2D_bibkx")
+
+[node name="QuagmireOverlay" type="Polygon2D" parent="." unique_id=517347070]
+visible = false
+color = Color(0.07480668, 0.0005022173, 0.09976079, 0.27450982)
+polygon = PackedVector2Array(0, 0, 64, 0, 64, 64, 0, 64)

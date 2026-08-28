@@ -43,6 +43,8 @@ var skill_preview_nodes: Array[Node] = []
 var current_action := Action.NONE
 var projectile_blockers: Dictionary = {}
 var bouncing_pads: Dictionary[Vector2i, Hunter_kit] = {}
+var active_aoe_effects: Array = []
+
 enum Action {
 	MOVE,
 	SKILL1,
@@ -252,10 +254,10 @@ func clear_move_range():
 			node.queue_free()
 	skill_preview_nodes.clear()
 
-func clean_up_skill():
+func clean_up_skill(retain = false):
 	clear_move_range()
 	active_skill = null
-	if energy == 0 && !free_movement:
+	if energy == 0 && !free_movement && !retain:
 		end_turn()
 
 func clear_target_tiles():
@@ -272,7 +274,7 @@ func clear_skill_state():
 func calculate_move_range(unit: Unit, diagonal = false):
 	clear_move_range()
 	var current_pos := unit.grid_position
-	var mobility := unit.data.mobility
+	var mobility := get_unit_mobility(unit)
 	
 	var directions = [
 		Vector2i.DOWN,
@@ -337,6 +339,9 @@ func handle_skill_pressed(skill_number: int, action: Action):
 		return
 	var skill := active_unit.skills[skill_number]
 	if skill.cooldown_remaining > 0:
+		clear_skill_state()
+		return
+	if skill.is_mobile && are_mobility_skills_blocked(active_unit):
 		clear_skill_state()
 		return
 	if active_skill:
@@ -434,20 +439,25 @@ func initialize_turn_order():
 
 func start_unit_turn(unit: Unit):
 	active_unit = unit
+	
+	for skill in unit.skills:
+		skill.on_owner_turn_start(self)
+	
 	if unit.get_status_stacks(Unit.EFFECTS.STUNNED) > 0:
 		unit.remove_status(Unit.EFFECTS.STUNNED)
 		unit.shake()
 		await get_tree().create_timer(0.5).timeout
 		end_turn()
 		return
+		
+	apply_aoe_effects(unit)
+	
 	energy = 1
 	free_movement = true
 	active_unit.set_selected(true)
 	unit_panel.update_energy(energy)
 	update_unit_visuals()
 	unit_panel.show_unit(unit)
-	for skill in unit.skills:
-		skill.on_owner_turn_start(self)
 
 func add_projectile_blocker(tile: Vector2i, blocker):
 	projectile_blockers[tile] = blocker
@@ -479,3 +489,27 @@ func get_bouncing_pad(pos: Vector2i, unit: Unit) -> Hunter_kit:
 	if unit in (player_units if pad.owner in player_units else enemy_units):
 		return pad
 	return null
+	
+func add_aoe_effect(effect) -> void:
+	active_aoe_effects.append(effect)
+
+func remove_aoe_effect(effect) -> void:
+	active_aoe_effects.erase(effect)
+
+func apply_aoe_effects(unit: Unit) -> void:
+	for effect in active_aoe_effects:
+		if effect.affects_position(unit.grid_position):
+			effect.on_unit_turn_start(self, unit)
+			
+func get_unit_mobility(unit: Unit) -> int:
+	var mobility := unit.data.mobility
+	for effect in active_aoe_effects:
+		if effect.has_method("get_mobility"):
+			mobility = effect.get_mobility(unit, mobility)
+	return mobility
+
+func are_mobility_skills_blocked(unit: Unit) -> bool:
+	for effect in active_aoe_effects:
+		if effect.has_method("blocks_mobility_skills") && effect.blocks_mobility_skills(unit):
+			return true
+	return false

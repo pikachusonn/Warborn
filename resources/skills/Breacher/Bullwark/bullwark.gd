@@ -12,6 +12,9 @@ func begin(
 	grid: GridField,
 	unit: Unit
 ) -> void:
+	if(grid.energy == 0):
+		grid.end_turn()
+		return
 	grid.targeting_skill = true
 	show_preview(grid, unit, Vector2i.ZERO)
 

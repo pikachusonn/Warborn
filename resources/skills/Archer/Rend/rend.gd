@@ -2,6 +2,9 @@ extends Skill
 class_name Rend
 
 func begin(grid_field: GridField, unit: Unit) -> void:
+	if(grid_field.energy == 0):
+		grid_field.end_turn()
+		return
 	var is_ally_archer := unit in grid_field.player_units
 	var enemies := grid_field.enemy_units if is_ally_archer else grid_field.player_units
 	var allies := grid_field.player_units if is_ally_archer else grid_field.enemy_units

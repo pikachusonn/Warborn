@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="Quagmire" format=3 uid="uid://ceokty2rol3wy"]
+
+[ext_resource type="Script" uid="uid://bdh8l77oovwaa" path="res://resources/skills/Quagmire/Quagmire/quagmire.gd" id="1_1w01o"]
+[ext_resource type="Resource" uid="uid://dctm5xx3ycyva" path="res://resources/skills/Quagmire/Mud Pillar/mud_pillar.tres" id="1_ca2ye"]
+
+[resource]
+script = ExtResource("1_1w01o")
+mud_pillar_skill = ExtResource("1_ca2ye")
+metadata/_custom_type_script = "uid://bdh8l77oovwaa"
