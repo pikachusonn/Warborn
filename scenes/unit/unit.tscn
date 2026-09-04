@@ -32,6 +32,7 @@ script = ExtResource("2_fvc8g")
 shape = SubResource("RectangleShape2D_vh40f")
 
 [node name="HPBar" type="ProgressBar" parent="." unique_id=22539605]
+z_index = 500
 custom_minimum_size = Vector2(64, 5)
 anchors_preset = 5
 anchor_left = 0.5
@@ -42,8 +43,25 @@ offset_right = 32.0
 offset_bottom = -37.0
 grow_horizontal = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_fvc8g")
+show_percentage = false
+
+[node name="TempHPOverlay" type="ColorRect" parent="HPBar" unique_id=1635694527]
+layout_mode = 0
+offset_bottom = 27.0
+mouse_filter = 2
+color = Color(0.8117647, 0.654902, 0.32156864, 0.6862745)
+
+[node name="HPLabel" type="Label" parent="HPBar" unique_id=1337832243]
+z_index = 1000
+layout_mode = 0
+offset_right = 64.0
+offset_bottom = 27.0
+theme_override_font_sizes/font_size = 12
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="StatusEffects" type="HBoxContainer" parent="." unique_id=633237847]
+z_index = 500
 custom_minimum_size = Vector2(64, 0)
 custom_maximum_size = Vector2(-1, 20)
 anchors_preset = -1
@@ -87,8 +105,12 @@ description = "Stunned, Unit skip the next turn"
 status_id = "stunned"
 
 [node name="SpeechBubble" type="PanelContainer" parent="." unique_id=885402778]
-offset_right = 40.0
-offset_bottom = 40.0
+visible = false
+z_index = 1000
+offset_left = -32.0
+offset_top = -77.0
+offset_right = 96.0
+offset_bottom = -37.0
 
 [node name="Label" type="Label" parent="SpeechBubble" unique_id=2103794658]
 layout_mode = 2

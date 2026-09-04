@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="Rupture" format=3 uid="uid://8p2fo4fmvu1v"]
+
+[ext_resource type="Script" uid="uid://fsquaqy1fev6" path="res://resources/skills/Quagmire/Rupture/rupture.gd" id="1_5b4u3"]
+
+[resource]
+script = ExtResource("1_5b4u3")
+skill_name = "Rupture"
+damage = 10
+metadata/_custom_type_script = "uid://fsquaqy1fev6"

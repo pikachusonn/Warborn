@@ -6,6 +6,12 @@
 [ext_resource type="SpriteFrames" uid="uid://cloamcskjtqaw" path="res://resources/units/Quagmire/enemy_quagmire_idle.tres" id="2_ar63t"]
 [ext_resource type="Resource" uid="uid://dctm5xx3ycyva" path="res://resources/skills/Quagmire/Mud Pillar/mud_pillar.tres" id="3_a5jun"]
 [ext_resource type="Resource" uid="uid://ceokty2rol3wy" path="res://resources/skills/Quagmire/Quagmire/quagmire.tres" id="6_s67n0"]
+[ext_resource type="Resource" uid="uid://8p2fo4fmvu1v" path="res://resources/skills/Quagmire/Rupture/rupture.tres" id="7_vw5gh"]
+[ext_resource type="Script" uid="uid://dkptv4kdimxl8" path="res://resources/skills/Quagmire/Shifting Sand/shifting_sand.gd" id="8_dqfur"]
+
+[sub_resource type="Resource" id="Resource_8l0r6"]
+script = ExtResource("8_dqfur")
+metadata/_custom_type_script = "uid://dkptv4kdimxl8"
 
 [resource]
 script = ExtResource("1_u42s6")
@@ -18,5 +24,5 @@ skill1_name = "Mud Pillar"
 skill2_name = "Quagmire"
 skill3_name = "Eruption"
 skill4_name = "Shifting Sand"
-skills = Array[ExtResource("2_a5jun")]([ExtResource("3_a5jun"), ExtResource("6_s67n0"), ExtResource("3_a5jun"), ExtResource("3_a5jun")])
+skills = Array[ExtResource("2_a5jun")]([ExtResource("3_a5jun"), ExtResource("6_s67n0"), ExtResource("7_vw5gh"), SubResource("Resource_8l0r6")])
 metadata/_custom_type_script = "uid://h8whgw5dvdue"

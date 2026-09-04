@@ -18,7 +18,7 @@ func begin(grid_field: GridField, unit: Unit) -> void:
 	if mud_pillar_skill == null:
 		return
 	for pos in mud_pillar_skill.active_pillars:
-		mud_pillar_skill.highlight_pillar(pos, true)
+		mud_pillar_skill.highlight_pillar(pos, true)    
 		
 func cancel(grid_field: GridField, _unit: Unit) -> void:
 	clear_pillar_highlights()
@@ -74,7 +74,7 @@ func create_quagmire_zone(grid_field: GridField, zone_tiles: Array[Vector2i]) ->
 	grid_field.add_aoe_effect(self)
 	for pos in zone_tiles:
 		if grid_field.tiles.has(pos):
-			grid_field.tiles[pos].show_quagmire()
+			grid_field.tiles[pos].show_quagmire(owner.side)
 
 func on_owner_turn_start(grid_field: GridField) -> void:
 	var expired: Array[Dictionary] = []
@@ -86,11 +86,12 @@ func on_owner_turn_start(grid_field: GridField) -> void:
 		clear_zone(grid_field, zone)
 		
 func clear_zone(grid_field: GridField, zone: Dictionary) -> void:
+	active_zones.erase(zone)
 	for pos in zone["tiles"]:
+		if is_position_in_quagmire(pos):
+			continue
 		if grid_field.tiles.has(pos):
 			grid_field.tiles[pos].clear_quagmire()
-
-	active_zones.erase(zone)
 	
 func is_position_in_quagmire(pos: Vector2i) -> bool:
 	for zone in active_zones:

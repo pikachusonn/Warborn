@@ -61,7 +61,11 @@ func clear_attack():
 func _on_clicked():
 	tile_clicked.emit(grid_position)
 	
-func show_quagmire():
+func show_quagmire(side):
+	if side == Unit.Side.PLAYER:
+		quagmire_overlay.color = Color("#06004a5a")
+	else:
+		quagmire_overlay.color = Color("#6600155a")
 	quagmire_overlay.visible = true
 
 func clear_quagmire():

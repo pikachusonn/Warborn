@@ -19,6 +19,7 @@ const EFFECTS = {
 
 var side: Side
 var current_health: int
+var temp_health: int
 var grid_position: Vector2i
 var is_selected := false
 var status_effects: Dictionary = {}
@@ -33,6 +34,10 @@ var status_tooltip: StatusTooltip
 @onready var enemy_archer_mark: status_effect_icon = $StatusEffects/EnemyHunterMark
 @onready var stun_icon: status_effect_icon = $StatusEffects/Stun
 @onready var effects_wrapper: HBoxContainer = $StatusEffects
+@onready var speech_bubble: PanelContainer = $SpeechBubble
+@onready var speech_label: Label = $SpeechBubble/Label
+@onready var temp_hp_overlay: ColorRect = $HPBar/TempHPOverlay
+@onready var hp_label: Label = $HPBar/HPLabel
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -111,13 +116,36 @@ func _draw():
 		Color(0.4, 0.85, 1.0, 0.9),
 		3.0
 	)
-func update_hp_bar():
-	hp_bar.max_value = data.health
-	hp_bar.value = current_health
+func update_hp_bar() -> void:
+	var max_health := data.health
+	var real_health = clamp(current_health, 0, max_health)
+	var shield_health = max(temp_health, 0)
+
+	hp_bar.max_value = max_health
+	hp_bar.value = real_health
+
+	var bar_width := hp_bar.size.x
+	var bar_height := hp_bar.size.y
+
+	var health_ratio := float(real_health) / float(max_health)
+	var temp_ratio := float(shield_health) / float(max_health)
+
+	var temp_width = bar_width * min(temp_ratio, health_ratio)
+
+	temp_hp_overlay.position = Vector2(0, 0)
+	temp_hp_overlay.size = Vector2(temp_width, bar_height)
+	temp_hp_overlay.visible = shield_health > 0
 	
-func take_damage(amount: int):
-	current_health -= amount;
-	current_health = max(current_health, 0)
+	hp_label.text = "%d/%d" % [real_health + shield_health, max_health]
+	
+func take_damage(amount: int) -> void:
+	if temp_health > 0:
+		var absorbed = min(temp_health, amount)
+		temp_health -= absorbed
+		amount -= absorbed
+	if amount > 0:
+		current_health -= amount
+	update_hp_bar()
 
 func heal(amount: int):
 	print('pre-heal: ', current_health)
@@ -169,3 +197,15 @@ func update_status_icons():
 	ally_archer_mark.visible = has_status(EFFECTS.ALLY_ARCHER_MARK)
 	stun_icon.visible = has_status(EFFECTS.STUNNED)
 	enemy_archer_mark.visible = has_status(EFFECTS.ENEMY_ARCHER_MARK)
+	
+func show_speech(text: String, duration := 1.5) -> void:
+	speech_label.text = text
+	speech_bubble.show()
+	await get_tree().create_timer(duration).timeout
+	if is_instance_valid(speech_bubble):
+		speech_bubble.hide()
+	
+func add_temp_health(amount: int) -> void:
+	temp_health += amount
+	update_hp_bar()
+	

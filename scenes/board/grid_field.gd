@@ -342,6 +342,7 @@ func handle_skill_pressed(skill_number: int, action: Action):
 		clear_skill_state()
 		return
 	if skill.is_mobile && are_mobility_skills_blocked(active_unit):
+		active_unit.show_speech("Can't use that here!")
 		clear_skill_state()
 		return
 	if active_skill:
@@ -491,6 +492,8 @@ func get_bouncing_pad(pos: Vector2i, unit: Unit) -> Hunter_kit:
 	return null
 	
 func add_aoe_effect(effect) -> void:
+	if effect in active_aoe_effects:
+		return
 	active_aoe_effects.append(effect)
 
 func remove_aoe_effect(effect) -> void:

@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="ShiftingSand" format=3 uid="uid://dnvfyxv2fb755"]
+
+[ext_resource type="Script" uid="uid://dkptv4kdimxl8" path="res://resources/skills/Quagmire/Shifting Sand/shifting_sand.gd" id="1_p05u5"]
+
+[resource]
+script = ExtResource("1_p05u5")
+metadata/_custom_type_script = "uid://dkptv4kdimxl8"

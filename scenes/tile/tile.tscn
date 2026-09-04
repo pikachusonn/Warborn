@@ -18,5 +18,5 @@ shape = SubResource("RectangleShape2D_bibkx")
 
 [node name="QuagmireOverlay" type="Polygon2D" parent="." unique_id=517347070]
 visible = false
-color = Color(0.07480668, 0.0005022173, 0.09976079, 0.27450982)
+color = Color(0.07450981, 0, 0.09803922, 0.3529412)
 polygon = PackedVector2Array(0, 0, 64, 0, 64, 64, 0, 64)
