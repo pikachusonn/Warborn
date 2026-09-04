@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="Helmet_Splitter" format=3 uid="uid://ym8880c361x"]
+
+[ext_resource type="Script" uid="uid://dhex6vl85a1ch" path="res://resources/skills/Berserker/Helmet Splitter/helmet_splitter.gd" id="1_po3kp"]
+
+[resource]
+script = ExtResource("1_po3kp")
+skill_name = "Helmet Splitter"
+damage = 25
+metadata/_custom_type_script = "uid://dhex6vl85a1ch"

@@ -205,7 +205,9 @@ func show_speech(text: String, duration := 1.5) -> void:
 	if is_instance_valid(speech_bubble):
 		speech_bubble.hide()
 	
-func add_temp_health(amount: int) -> void:
+func add_temp_health(amount: int, grid: GridField) -> void:
 	temp_health += amount
 	update_hp_bar()
+	if (self == grid.active_unit):
+		grid.unit_panel.update_health(grid.active_unit)
 	

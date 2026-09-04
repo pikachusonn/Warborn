@@ -21,6 +21,7 @@ var enemy_units: Array[Unit] = []
 @export var breacher_data: UnitData
 @export var archer_data: UnitData
 @export var quagmire_data: UnitData
+@export var berserker_data: UnitData
 # ================================
 # TURN
 # ================================
@@ -77,6 +78,11 @@ func _ready() -> void:
 			"side": Unit.Side.PLAYER
 		},
 		{
+			"data": berserker_data,
+			"position": Vector2i(2, 8),
+			"side": Unit.Side.PLAYER
+		},
+		{
 			"data": quagmire_data,
 			"position": Vector2i(8, 9),
 			"side": Unit.Side.PLAYER
@@ -91,6 +97,11 @@ func _ready() -> void:
 		{
 			"data": archer_data,
 			"position": Vector2i(5, 0),
+			"side": Unit.Side.ENEMY
+		},
+		{
+			"data": berserker_data,
+			"position": Vector2i(7, 1),
 			"side": Unit.Side.ENEMY
 		},
 		{

@@ -62,7 +62,7 @@ func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i
 		if target.grid_position not in target_positions:
 			continue
 		if target.side == unit.side:
-			target.add_temp_health(temp_health)
+			target.add_temp_health(temp_health, grid_field)
 		else:
 			target.take_damage(damage)
 		target.shake()

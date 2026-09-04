@@ -7,6 +7,7 @@
 [ext_resource type="Resource" uid="uid://csplxy6uvqi7l" path="res://resources/units/Archer/Archer.tres" id="5_xmbel"]
 [ext_resource type="Resource" uid="uid://cuxuirgbkvn5a" path="res://resources/units/Quagmire/Quagmire.tres" id="6_2lxyn"]
 [ext_resource type="PackedScene" uid="uid://cksexigk5bvbc" path="res://scenes/canvas_layer.tscn" id="6_4gtxg"]
+[ext_resource type="Resource" uid="uid://5vbwgiolhbpg" path="res://resources/units/Berserker/Berserker.tres" id="7_bkt86"]
 
 [node name="GridField" type="Node2D" unique_id=1515789650]
 script = ExtResource("1_mnn36")
@@ -15,6 +16,7 @@ unit_scene = ExtResource("3_7hqsk")
 breacher_data = ExtResource("4_vlvcf")
 archer_data = ExtResource("5_xmbel")
 quagmire_data = ExtResource("6_2lxyn")
+berserker_data = ExtResource("7_bkt86")
 
 [node name="Tile" parent="." unique_id=403099390 instance=ExtResource("2_7hqsk")]
 

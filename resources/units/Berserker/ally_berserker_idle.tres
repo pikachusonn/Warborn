@@ -1,0 +1,53 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://b5hbyj3wxk8xn"]
+
+[ext_resource type="Texture2D" uid="uid://dy8fwpayaaqbd" path="res://assets/ally_berserker_idle.png" id="1_ih51s"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ccko3"]
+atlas = ExtResource("1_ih51s")
+region = Rect2(0, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1mstk"]
+atlas = ExtResource("1_ih51s")
+region = Rect2(362, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_d25ye"]
+atlas = ExtResource("1_ih51s")
+region = Rect2(724, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_20n2o"]
+atlas = ExtResource("1_ih51s")
+region = Rect2(1086, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4fjt6"]
+atlas = ExtResource("1_ih51s")
+region = Rect2(1448, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_c5064"]
+atlas = ExtResource("1_ih51s")
+region = Rect2(1810, 0, 362, 724)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ccko3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1mstk")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_d25ye")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_20n2o")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4fjt6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_c5064")
+}],
+"loop": 1,
+"name": &"idle",
+"speed": 6.0
+}]

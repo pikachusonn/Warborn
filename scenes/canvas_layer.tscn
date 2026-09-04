@@ -76,6 +76,19 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_styles/fill = SubResource("StyleBoxFlat_ex8h3")
 value = 100.0
+show_percentage = false
+
+[node name="TempHealthOverlay" type="ColorRect" parent="BottomHUD/HBoxContainer/VBoxContainer/HPBar" unique_id=1356218635]
+layout_mode = 0
+offset_bottom = 30.0
+color = Color(0.8117647, 0.654902, 0.32156864, 0.6862745)
+
+[node name="HPLabel" type="Label" parent="BottomHUD/HBoxContainer/VBoxContainer/HPBar" unique_id=879942647]
+layout_mode = 0
+offset_right = 1716.0
+offset_bottom = 30.0
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Actions" type="HBoxContainer" parent="BottomHUD/HBoxContainer/VBoxContainer" unique_id=822600366]
 custom_minimum_size = Vector2(0, 50)

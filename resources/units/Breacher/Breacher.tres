@@ -12,6 +12,7 @@
 [resource]
 script = ExtResource("3_qol47")
 unit_name = "Breacher"
+health = 125
 mobility = 2
 speed = 3
 ally_sprite_frames = ExtResource("1_i4ty4")

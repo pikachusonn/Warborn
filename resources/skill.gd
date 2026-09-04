@@ -7,7 +7,7 @@ class_name Skill
 @export var cutscene_video: VideoStream
 @export var is_projectile: bool
 @export var is_mobile: bool = false
-
+@export var is_passive: bool = false
 @export var cooldown: int = 0
 var cooldown_remaining: int = 0
 
@@ -41,4 +41,7 @@ func instant_cast() -> bool:
 	return false
 
 func on_owner_turn_start(grid: GridField):
+	pass
+	
+func on_skill_resolved(_grid_field: GridField, _owner: Unit, _used_skill: Skill, _total_damage: int, _execution_count: int) -> void:
 	pass

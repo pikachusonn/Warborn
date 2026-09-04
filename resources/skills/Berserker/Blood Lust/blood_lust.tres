@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="BloodLust" format=3 uid="uid://o1m5ydrrcgrs"]
+
+[ext_resource type="Script" uid="uid://dtla7edbvk1by" path="res://resources/skills/Berserker/Blood Lust/blood_lust.gd" id="1_sv3m5"]
+
+[resource]
+script = ExtResource("1_sv3m5")
+metadata/_custom_type_script = "uid://dtla7edbvk1by"

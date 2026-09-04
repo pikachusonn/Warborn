@@ -8,6 +8,7 @@ var owner: Unit = null
 var stage := Stage.PILLAR
 var selected_pillar := Vector2i(-1, -1)
 var hovered_pillar := Vector2i(-1, -1)
+var direction_arrow: Polygon2D
 
 func begin(grid_field: GridField, unit: Unit) -> void:
 	grid_field.targeting_skill = true
@@ -15,6 +16,7 @@ func begin(grid_field: GridField, unit: Unit) -> void:
 	stage = Stage.PILLAR
 	selected_pillar = Vector2i(-1, -1)
 	hovered_pillar = Vector2i(-1, -1)
+	direction_arrow = null
 
 	for skill in unit.skills:
 		if skill is Mud_Pillar:
@@ -67,6 +69,28 @@ func update_direction_preview(grid_field: GridField) -> void:
 		var tile = grid_field.tiles[pos]
 		tile.set_attackable(true)
 		grid_field.target_tiles.append(tile)
+	show_direction_arrow(grid_field, direction)
+
+func show_direction_arrow(grid_field: GridField, direction: Vector2i) -> void:
+	if not is_instance_valid(direction_arrow) or direction_arrow.is_queued_for_deletion():
+		direction_arrow = Polygon2D.new()
+		direction_arrow.polygon = PackedVector2Array([
+			Vector2(-26, -10),
+			Vector2(8, -10),
+			Vector2(8, -22),
+			Vector2(28, 0),
+			Vector2(8, 22),
+			Vector2(8, 10),
+			Vector2(-26, 10),
+		])
+		direction_arrow.color = Color(1.0, 0.502, 0.224, 0.565)
+		direction_arrow.z_index = 600
+		grid_field.add_child(direction_arrow)
+		grid_field.skill_preview_nodes.append(direction_arrow)
+
+	var pillar_center := grid_field.get_tile_center(selected_pillar)
+	direction_arrow.global_position = pillar_center + Vector2(direction * GridField.TILE_SIZE)
+	direction_arrow.rotation = Vector2(direction).angle()
 
 func get_pillar_direction(grid_field: GridField) -> Vector2i:
 	var pillar_world := grid_field.get_tile_center(selected_pillar)
@@ -110,7 +134,8 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 			return
 
 		grid_field.targeting_skill = false
-		grid_field.clear_target_tiles()
+		grid_field.clear_move_range()
+		direction_arrow = null
 
 		mud_pillar_skill.remove_pillar(grid_field, selected_pillar)
 
@@ -121,13 +146,20 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 		
 func execute(grid_field: GridField, _unit: Unit, target_positions: Array[Vector2i], direction: Vector2i, distance: int) -> void:
 	var all_units = grid_field.player_units + grid_field.enemy_units
+	var affected_units: Array[Unit] = []
 
 	for target in all_units:
-		if target.grid_position not in target_positions:
-			continue
-		var destination = target.grid_position
+		if target.grid_position in target_positions:
+			affected_units.append(target)
+
+	affected_units.sort_custom(func(a: Unit, b: Unit):
+		return Vector2(a.grid_position).dot(Vector2(direction)) > Vector2(b.grid_position).dot(Vector2(direction))
+	)
+
+	for target in affected_units:
+		var destination := target.grid_position
 		for step in range(distance):
-			var next_pos = destination + direction
+			var next_pos := destination + direction
 			if not grid_field.tiles.has(next_pos):
 				break
 			var occupied := false

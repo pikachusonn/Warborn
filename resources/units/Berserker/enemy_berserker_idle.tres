@@ -1,0 +1,53 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://cjvit7x08swd"]
+
+[ext_resource type="Texture2D" uid="uid://bpeub673qfdat" path="res://assets/enemy_berserker_idle.png" id="1_adibu"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_idcvo"]
+atlas = ExtResource("1_adibu")
+region = Rect2(0, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_n68wr"]
+atlas = ExtResource("1_adibu")
+region = Rect2(362, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_p785r"]
+atlas = ExtResource("1_adibu")
+region = Rect2(724, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4f3v4"]
+atlas = ExtResource("1_adibu")
+region = Rect2(1086, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_w2srs"]
+atlas = ExtResource("1_adibu")
+region = Rect2(1448, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ssobu"]
+atlas = ExtResource("1_adibu")
+region = Rect2(1810, 0, 362, 724)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_idcvo")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_n68wr")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_p785r")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4f3v4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_w2srs")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ssobu")
+}],
+"loop": 1,
+"name": &"idle",
+"speed": 6.0
+}]
