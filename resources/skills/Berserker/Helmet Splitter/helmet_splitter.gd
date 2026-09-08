@@ -1,5 +1,5 @@
 extends Skill
-class_name HelmetSplitter
+class_name Helmet_Splitter
 
 var execute_damage_bonus: int = 0
 
@@ -116,7 +116,7 @@ func get_total_damage() -> int:
 	return damage + execute_damage_bonus
 
 
-func increase_damage(amount: int) -> void:
+func add_damage_bonus(amount: int) -> void:
 	execute_damage_bonus += amount
 
 func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i], _direction: Vector2i, _distance: int) -> void:
@@ -133,7 +133,6 @@ func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i
 
 	var total_damage_dealt := 0
 	var execution_count := 0
-
 	for target in targets:
 		var health_before: int = target.current_health
 		target.take_damage(get_total_damage())

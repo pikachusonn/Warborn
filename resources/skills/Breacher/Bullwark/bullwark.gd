@@ -32,7 +32,6 @@ func on_tile_clicked(
 	_pos: Vector2i
 ) -> void:
 	grid.targeting_skill = false
-	print("hehehe")
 	await execute(grid, unit, [], Vector2i.ZERO, 1)
 	grid.energy -= 1
 	grid.unit_panel.update_energy(grid.energy)

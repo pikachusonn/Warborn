@@ -4,14 +4,12 @@
 [ext_resource type="SpriteFrames" uid="uid://cjvit7x08swd" path="res://resources/units/Berserker/enemy_berserker_idle.tres" id="2_dt6tw"]
 [ext_resource type="Script" uid="uid://h8whgw5dvdue" path="res://resources/unit_data.gd" id="3_x3f4j"]
 [ext_resource type="Script" uid="uid://drnl62itlgxtu" path="res://resources/skill.gd" id="4_00knq"]
-[ext_resource type="Script" uid="uid://dhex6vl85a1ch" path="res://resources/skills/Berserker/Helmet Splitter/helmet_splitter.gd" id="5_dt6tw"]
-
-[sub_resource type="Resource" id="Resource_po3kp"]
-script = ExtResource("5_dt6tw")
-metadata/_custom_type_script = "uid://dhex6vl85a1ch"
+[ext_resource type="Resource" uid="uid://ym8880c361x" path="res://resources/skills/Berserker/Helmet Splitter/helmet_splitter.tres" id="5_x3f4j"]
+[ext_resource type="Resource" uid="uid://o1m5ydrrcgrs" path="res://resources/skills/Berserker/Blood Lust/blood_lust.tres" id="6_x3f4j"]
 
 [resource]
 script = ExtResource("3_x3f4j")
+mobility = 2
 speed = 2
 ally_sprite_frames = ExtResource("1_tb2nm")
 enemy_sprite_frames = ExtResource("2_dt6tw")
@@ -19,5 +17,5 @@ skill1_name = "Helmet Splitter"
 skill2_name = "Crater Maker"
 skill3_name = "Blood Lust"
 skill4_name = "Odin's Blessing"
-skills = Array[ExtResource("4_00knq")]([SubResource("Resource_po3kp")])
+skills = Array[ExtResource("4_00knq")]([ExtResource("5_x3f4j"), ExtResource("5_x3f4j"), ExtResource("6_x3f4j")])
 metadata/_custom_type_script = "uid://h8whgw5dvdue"

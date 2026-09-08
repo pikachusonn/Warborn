@@ -19,32 +19,7 @@ func begin(grid_field: GridField, unit: Unit) -> void:
 		return
 	stage = Stage.SHOT
 	grid_field.targeting_skill = true
-
-#func get_target_tiles(grid_field: GridField, unit: Unit, direction: Vector2i, _distance: int = 1) -> Array[Vector2i]:
-	#var target_tiles := get_line_tiles(grid_field, unit, unit.grid_position, direction)
-	#print("SHOT LINE: ", target_tiles)
-	#print("PADS: ", grid_field.bouncing_pads)
-#
-	#var pad_position: Variant = null
-	#for pos in target_tiles:
-		#if grid_field.get_bouncing_pad(pos, unit):
-			#pad_position = pos
-			#break
-#
-	#print("FOUND PAD: ", pad_position)
-	#if pad_position == null:
-		#return target_tiles
-#
-	#var bounce_directions := get_bounce_directions(direction)
-	#for bounce_direction in bounce_directions:
-		#var bounce_tiles := get_line_tiles(grid_field, unit, pad_position, bounce_direction)
-		#print("BOUNCE: ", bounce_direction, " ", bounce_tiles)
-		#for tile in bounce_tiles:
-			#if tile not in target_tiles:
-				#target_tiles.append(tile)
-#
-	#return target_tiles
-	#
+	
 func get_target_tiles(grid_field: GridField, unit: Unit, direction: Vector2i, _distance: int = 1) -> Array[Vector2i]:
 	return get_line_tiles(grid_field, unit, unit.grid_position, direction)
 

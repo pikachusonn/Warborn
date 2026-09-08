@@ -183,7 +183,6 @@ func has_status(status: String) -> bool:
 	return status_effects.has(status)
 
 func get_status_stacks(status: String) -> int:
-	print(status_effects)
 	return status_effects.get(status, 0)
 	
 func deduct_status_stack(status: String):
