@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="Crater_Maker" format=3 uid="uid://pmrq82pvub3s"]
+
+[ext_resource type="Script" uid="uid://o2ifrhstkxao" path="res://resources/skills/Berserker/Crater Maker/crater_maker.gd" id="1_rr0lu"]
+
+[resource]
+script = ExtResource("1_rr0lu")
+skill_name = "Crater Maker"
+damage = 15
+is_mobile = true
+cooldown = 3
+metadata/_custom_type_script = "uid://o2ifrhstkxao"
