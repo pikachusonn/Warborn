@@ -41,10 +41,16 @@ var active_skill: Skill = null
 var targeting_skill := false
 var locked_skill_direction: Vector2i
 var skill_preview_nodes: Array[Node] = []
+var impact_preview_tiles: Array = []
 var current_action := Action.NONE
 var projectile_blockers: Dictionary = {}
 var bouncing_pads: Dictionary[Vector2i, Hunter_kit] = {}
 var active_aoe_effects: Array = []
+var aoe_tile_owners: Dictionary = {}
+@export var odin_test_frames: SpriteFrames
+@export var odin_test_animation: StringName = &"test"
+@export var odin_test_center := Vector2i(4, 4)
+@export_range(0.5, 3.0, 0.1) var odin_test_scale_multiplier := 2
 
 enum Action {
 	MOVE,
@@ -111,6 +117,7 @@ func _ready() -> void:
 		}
 	]
 	generate_grid()
+	show_odin_test_animation()
 	spawn_team(players_characters)
 	spawn_team(enemies_characters)
 	update_unit_visuals()
@@ -121,7 +128,45 @@ func _ready() -> void:
 	unit_panel.skill4_pressed.connect(handle_skill_pressed.bind(3, Action.SKILL4))
 	unit_panel.end_turn_pressed.connect(end_turn)
 	start_combat()
-	
+
+func show_odin_test_animation() -> void:
+	if odin_test_frames == null:
+		return
+
+	if not odin_test_frames.has_animation(odin_test_animation):
+		return
+
+	var sprite := AnimatedSprite2D.new()
+	add_child(sprite)
+
+	sprite.sprite_frames = odin_test_frames
+	sprite.animation = odin_test_animation
+	sprite.centered = true
+	sprite.z_index = 20
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+	sprite.position = (
+		Vector2(odin_test_center) * TILE_SIZE
+		+ Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0)
+	)
+
+	var first_frame := odin_test_frames.get_frame_texture(
+		odin_test_animation,
+		0
+	)
+
+	if first_frame:
+		var target_size := Vector2(
+			TILE_SIZE * 3,
+			TILE_SIZE * 3
+		)
+
+		var frame_size := first_frame.get_size()
+		var scale_factor = min(target_size.x / frame_size.x, target_size.y / frame_size.y)
+		sprite.scale = Vector2.ONE * scale_factor * odin_test_scale_multiplier
+		sprite.modulate = Color(1.0, 1.0, 1.0, 0.5)
+		sprite.play()
+
 func _process(_delta: float) -> void:
 	var mouse_pos = get_global_mouse_position()
 	var local_mouse = to_local(mouse_pos)
@@ -192,6 +237,27 @@ func spawn_team(team):
 		var pos: Vector2i = character["position"]
 		var side: Unit.Side = character["side"]
 		spawn_character(data, pos, side)
+		
+func get_mouse_grid_position() -> Vector2i:
+	var mouse_position := to_local(get_global_mouse_position())
+	return Vector2i(floori(mouse_position.x / 64.0), floori(mouse_position.y / 64.0))
+	
+func clear_impact_preview() -> void:
+	for tile in impact_preview_tiles:
+		if tile in target_tiles:
+			tile.set_attackable(true)
+		else:
+			tile.set_attackable(false)
+	impact_preview_tiles.clear()
+	
+func show_impact_preview(positions: Array[Vector2i]) -> void:
+	clear_impact_preview()
+	for position in positions:
+		if not tiles.has(position):
+			continue
+		var tile = tiles[position]
+		tile.set_attack_warning()
+		impact_preview_tiles.append(tile)
 		
 func move_unit(unit: Unit, target_pos: Vector2i):
 	if not tiles.has(target_pos):
@@ -278,6 +344,7 @@ func clear_target_tiles():
 	target_tiles.clear()
 
 func clear_skill_state():
+	clear_impact_preview()
 	clear_target_tiles()
 	targeting_skill = false
 	current_action = Action.NONE
@@ -451,7 +518,7 @@ func initialize_turn_order():
 
 func start_unit_turn(unit: Unit):
 	active_unit = unit
-	
+	active_unit.clear_temp_health()
 	for skill in unit.skills:
 		skill.on_owner_turn_start(self)
 	
@@ -502,13 +569,33 @@ func get_bouncing_pad(pos: Vector2i, unit: Unit) -> Hunter_kit:
 		return pad
 	return null
 	
-func add_aoe_effect(effect) -> void:
-	if effect in active_aoe_effects:
-		return
-	active_aoe_effects.append(effect)
+func add_aoe_effect(effect, positions: Array[Vector2i]) -> Array[Vector2i]:
+	var valid_positions: Array[Vector2i] = []
+	for position in positions:
+		if not tiles.has(position):
+			continue
+		var previous_effect = aoe_tile_owners.get(position)
+		if previous_effect != null:
+			if previous_effect.has_method("remove_aoe_position"):
+				previous_effect.remove_aoe_position(self, position)
+		aoe_tile_owners[position] = effect
+		valid_positions.append(position)
+	if effect not in active_aoe_effects:
+		active_aoe_effects.append(effect)
+	return valid_positions
 
+func release_aoe_position(effect, position: Vector2i) -> bool:
+	if aoe_tile_owners.get(position) != effect:
+		return false
+	aoe_tile_owners.erase(position)
+	return true
+	
 func remove_aoe_effect(effect) -> void:
 	active_aoe_effects.erase(effect)
+	var owned_positions := aoe_tile_owners.keys()
+	for position in owned_positions:
+		if aoe_tile_owners[position] == effect:
+			aoe_tile_owners.erase(position)
 
 func apply_aoe_effects(unit: Unit) -> void:
 	for effect in active_aoe_effects:

@@ -70,11 +70,27 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 	grid_field.unit_panel.clear_skill_active()
 	
 func create_quagmire_zone(grid_field: GridField, zone_tiles: Array[Vector2i]) -> void:
-	active_zones.append({ "tiles": zone_tiles, "turns": zone_duration })
-	grid_field.add_aoe_effect(self)
-	for pos in zone_tiles:
-		if grid_field.tiles.has(pos):
-			grid_field.tiles[pos].show_quagmire(owner.side)
+	var claimed_tiles := grid_field.add_aoe_effect(self, zone_tiles)
+	active_zones.append({ "tiles": claimed_tiles, "turns": zone_duration })
+	for pos in claimed_tiles:
+		grid_field.tiles[pos].show_quagmire(owner.side)
+		
+func remove_aoe_position(grid_field: GridField, position: Vector2i) -> void:
+	var empty_zones: Array[Dictionary] = []
+	for zone in active_zones:
+		var zone_tiles: Array = zone["tiles"]
+		if position not in zone_tiles:
+			continue
+		zone_tiles.erase(position)
+		zone["tiles"] = zone_tiles
+		if zone_tiles.is_empty():
+			empty_zones.append(zone)
+	for zone in empty_zones:
+		active_zones.erase(zone)
+	if grid_field.tiles.has(position):
+		grid_field.tiles[position].clear_quagmire()
+	if active_zones.is_empty():
+		grid_field.remove_aoe_effect(self)
 
 func on_owner_turn_start(grid_field: GridField) -> void:
 	var expired: Array[Dictionary] = []
@@ -84,14 +100,15 @@ func on_owner_turn_start(grid_field: GridField) -> void:
 			expired.append(zone)
 	for zone in expired:
 		clear_zone(grid_field, zone)
-		
+			
 func clear_zone(grid_field: GridField, zone: Dictionary) -> void:
 	active_zones.erase(zone)
 	for pos in zone["tiles"]:
-		if is_position_in_quagmire(pos):
-			continue
-		if grid_field.tiles.has(pos):
+		var released := (grid_field.release_aoe_position(self, pos))
+		if released and grid_field.tiles.has(pos):
 			grid_field.tiles[pos].clear_quagmire()
+	if active_zones.is_empty():
+		grid_field.remove_aoe_effect(self)
 	
 func is_position_in_quagmire(pos: Vector2i) -> bool:
 	for zone in active_zones:

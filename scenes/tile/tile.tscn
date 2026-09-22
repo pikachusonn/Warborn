@@ -20,3 +20,8 @@ shape = SubResource("RectangleShape2D_bibkx")
 visible = false
 color = Color(0.07450981, 0, 0.09803922, 0.3529412)
 polygon = PackedVector2Array(0, 0, 64, 0, 64, 64, 0, 64)
+
+[node name="AoeOverlay" type="Polygon2D" parent="." unique_id=2122510049]
+visible = false
+color = Color(0.07450981, 0, 0.09803922, 0.3529412)
+polygon = PackedVector2Array(0, 0, 64, 0, 64, 64, 0, 64)

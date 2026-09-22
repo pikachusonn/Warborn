@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="OdinBlessing" format=3 uid="uid://d2x40lbmn5gwc"]
+
+[ext_resource type="Script" uid="uid://md3k8nm6gr63" path="res://resources/skills/Berserker/Odin's Blessing/odin_blessing.gd" id="1_q6oce"]
+
+[resource]
+script = ExtResource("1_q6oce")
+metadata/_custom_type_script = "uid://md3k8nm6gr63"

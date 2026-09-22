@@ -8,6 +8,7 @@ signal tile_clicked(position: Vector2i)
 
 @onready var clicked_area = $ClickArea
 @onready var quagmire_overlay: Polygon2D = $QuagmireOverlay
+@onready var aoe_overlay: Polygon2D = $AoeOverlay
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -70,3 +71,11 @@ func show_quagmire(side):
 
 func clear_quagmire():
 	quagmire_overlay.visible = false
+
+func show_aoe(color: Color, opacity: float) -> void:
+	color.a = opacity
+	aoe_overlay.color = color
+	aoe_overlay.visible = true
+
+func clear_aoe() -> void:
+	aoe_overlay.visible = false

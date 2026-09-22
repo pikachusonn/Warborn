@@ -1,6 +1,7 @@
 [gd_resource type="SpriteFrames" format=3 uid="uid://b1e3c27umis04"]
 
 [ext_resource type="Texture2D" uid="uid://cfm8jlkxm6hos" path="res://assets/enemy_archer_idle.png" id="1_so248"]
+[ext_resource type="Texture2D" uid="uid://biayxeen356f7" path="res://assets/ob_sprite.png" id="2_og2tk"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_og2tk"]
 atlas = ExtResource("1_so248")
@@ -26,6 +27,30 @@ region = Rect2(768, 0, 192, 192)
 atlas = ExtResource("1_so248")
 region = Rect2(960, 0, 192, 192)
 
+[sub_resource type="AtlasTexture" id="AtlasTexture_od5md"]
+atlas = ExtResource("2_og2tk")
+region = Rect2(0, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_f3eq3"]
+atlas = ExtResource("2_og2tk")
+region = Rect2(362, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3643c"]
+atlas = ExtResource("2_og2tk")
+region = Rect2(724, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_63nln"]
+atlas = ExtResource("2_og2tk")
+region = Rect2(1086, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_uwh87"]
+atlas = ExtResource("2_og2tk")
+region = Rect2(1448, 0, 362, 724)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jexd7"]
+atlas = ExtResource("2_og2tk")
+region = Rect2(1810, 0, 362, 724)
+
 [resource]
 animations = [{
 "frames": [{
@@ -50,4 +75,27 @@ animations = [{
 "loop": 1,
 "name": &"idle",
 "speed": 12.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_od5md")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_f3eq3")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3643c")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_63nln")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_uwh87")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_jexd7")
+}],
+"loop": 1,
+"name": &"test",
+"speed": 6.0
 }]

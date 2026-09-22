@@ -209,4 +209,9 @@ func add_temp_health(amount: int, grid: GridField) -> void:
 	update_hp_bar()
 	if (self == grid.active_unit):
 		grid.unit_panel.update_health(grid.active_unit)
+		
+func clear_temp_health () -> void:
+	if temp_health <= 0:
+		return
+	temp_health = 0
 	

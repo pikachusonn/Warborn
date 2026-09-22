@@ -7,6 +7,7 @@
 [ext_resource type="Resource" uid="uid://ym8880c361x" path="res://resources/skills/Berserker/Helmet Splitter/helmet_splitter.tres" id="5_x3f4j"]
 [ext_resource type="Resource" uid="uid://pmrq82pvub3s" path="res://resources/skills/Berserker/Crater Maker/crater_maker.tres" id="6_00knq"]
 [ext_resource type="Resource" uid="uid://o1m5ydrrcgrs" path="res://resources/skills/Berserker/Blood Lust/blood_lust.tres" id="6_x3f4j"]
+[ext_resource type="Resource" uid="uid://d2x40lbmn5gwc" path="res://resources/skills/Berserker/Odin's Blessing/odin_blessing.tres" id="8_d5clu"]
 
 [resource]
 script = ExtResource("3_x3f4j")
@@ -18,5 +19,5 @@ skill1_name = "Helmet Splitter"
 skill2_name = "Crater Maker"
 skill3_name = "Blood Lust"
 skill4_name = "Odin's Blessing"
-skills = Array[ExtResource("4_00knq")]([ExtResource("5_x3f4j"), ExtResource("6_00knq"), ExtResource("6_x3f4j")])
+skills = Array[ExtResource("4_00knq")]([ExtResource("5_x3f4j"), ExtResource("6_00knq"), ExtResource("6_x3f4j"), ExtResource("8_d5clu")])
 metadata/_custom_type_script = "uid://h8whgw5dvdue"
