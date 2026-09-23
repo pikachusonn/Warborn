@@ -34,6 +34,7 @@ var turn_index := 0
 var active_unit: Unit
 var energy := 0
 var free_movement := false
+var resolving_turn_start := false
 # ================================
 # SKILLS / TARGETING
 # ================================
@@ -47,10 +48,8 @@ var projectile_blockers: Dictionary = {}
 var bouncing_pads: Dictionary[Vector2i, Hunter_kit] = {}
 var active_aoe_effects: Array = []
 var aoe_tile_owners: Dictionary = {}
-@export var odin_test_frames: SpriteFrames
-@export var odin_test_animation: StringName = &"test"
-@export var odin_test_center := Vector2i(4, 4)
-@export_range(0.5, 3.0, 0.1) var odin_test_scale_multiplier := 2
+var aoe_hover_glow: Node2D
+var suppressed_aoe_hover_tiles: Array[Vector2i] = []
 
 enum Action {
 	MOVE,
@@ -117,7 +116,6 @@ func _ready() -> void:
 		}
 	]
 	generate_grid()
-	show_odin_test_animation()
 	spawn_team(players_characters)
 	spawn_team(enemies_characters)
 	update_unit_visuals()
@@ -129,49 +127,12 @@ func _ready() -> void:
 	unit_panel.end_turn_pressed.connect(end_turn)
 	start_combat()
 
-func show_odin_test_animation() -> void:
-	if odin_test_frames == null:
-		return
-
-	if not odin_test_frames.has_animation(odin_test_animation):
-		return
-
-	var sprite := AnimatedSprite2D.new()
-	add_child(sprite)
-
-	sprite.sprite_frames = odin_test_frames
-	sprite.animation = odin_test_animation
-	sprite.centered = true
-	sprite.z_index = 20
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-
-	sprite.position = (
-		Vector2(odin_test_center) * TILE_SIZE
-		+ Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0)
-	)
-
-	var first_frame := odin_test_frames.get_frame_texture(
-		odin_test_animation,
-		0
-	)
-
-	if first_frame:
-		var target_size := Vector2(
-			TILE_SIZE * 3,
-			TILE_SIZE * 3
-		)
-
-		var frame_size := first_frame.get_size()
-		var scale_factor = min(target_size.x / frame_size.x, target_size.y / frame_size.y)
-		sprite.scale = Vector2.ONE * scale_factor * odin_test_scale_multiplier
-		sprite.modulate = Color(1.0, 1.0, 1.0, 0.5)
-		sprite.play()
-
 func _process(_delta: float) -> void:
 	var mouse_pos = get_global_mouse_position()
 	var local_mouse = to_local(mouse_pos)
-	var grid_pos = Vector2i(local_mouse / TILE_SIZE)
+	var grid_pos = Vector2i(floori(local_mouse.x / TILE_SIZE), floori(local_mouse.y / TILE_SIZE))
 	if not tiles.has(grid_pos):
+		suppressed_aoe_hover_tiles.clear()
 		clear_hover()
 		if hovered_unit:
 			hovered_unit.set_hovered(false)
@@ -183,16 +144,70 @@ func _process(_delta: float) -> void:
 		active_skill.update_preview(self, active_unit)
 	var tile = tiles[grid_pos]
 	if tile == hovered_tile:
+		update_aoe_hover(grid_pos)
 		return
 	clear_hover()
 	hovered_tile = tile
 	hovered_tile.set_hovered(true)
 	update_hovered_unit(tile)
+	update_aoe_hover(grid_pos)
 
 func clear_hover() -> void:
+	update_zone_cloud_hover([])
+	if is_instance_valid(aoe_hover_glow):
+		for position in aoe_hover_glow.positions:
+			if tiles.has(position):
+				tiles[position].set_aoe_hovered(false)
+		aoe_hover_glow.set_tiles([])
 	if hovered_tile:
 		hovered_tile.set_hovered(false)
 		hovered_tile = null
+
+func update_aoe_hover(position: Vector2i) -> void:
+	var highlighted: Array[Vector2i] = []
+	var effect = aoe_tile_owners.get(position)
+	if position not in suppressed_aoe_hover_tiles:
+		suppressed_aoe_hover_tiles.clear()
+	if effect != null and effect in active_aoe_effects:
+		var candidates: Array = []
+		if effect.has_method("get_aoe_zone_tiles"):
+			candidates = effect.get_aoe_zone_tiles(position)
+		else:
+			candidates = aoe_tile_owners.keys()
+		for candidate in candidates:
+			if tiles.has(candidate) and aoe_tile_owners.get(candidate) == effect:
+				highlighted.append(candidate)
+	if targeting_skill or current_action == Action.MOVE:
+		# Remember the entire zone until the cursor leaves, even after targeting ends.
+		suppressed_aoe_hover_tiles.assign(highlighted)
+		highlighted.clear()
+	elif position in suppressed_aoe_hover_tiles:
+		highlighted.clear()
+	update_zone_cloud_hover(highlighted)
+	if not is_instance_valid(aoe_hover_glow):
+		if highlighted.is_empty():
+			return
+		aoe_hover_glow = preload("res://scenes/board/aoe_hover_glow.gd").new()
+		aoe_hover_glow.z_index = 1
+		add_child(aoe_hover_glow)
+	for previous_position in aoe_hover_glow.positions:
+		if previous_position not in highlighted and tiles.has(previous_position):
+			tiles[previous_position].set_aoe_hovered(false)
+	for highlighted_position in highlighted:
+		tiles[highlighted_position].set_aoe_hovered(true)
+	var color := Color.WHITE
+	if not highlighted.is_empty():
+		color = tiles[position].get_aoe_color()
+	aoe_hover_glow.set_tiles(highlighted, color)
+
+func suppress_aoe_hover(positions: Array[Vector2i]) -> void:
+	suppressed_aoe_hover_tiles.assign(positions)
+	clear_hover()
+
+func update_zone_cloud_hover(positions: Array[Vector2i]) -> void:
+	for effect in active_aoe_effects:
+		if effect.has_method("set_zone_hover"):
+			effect.set_zone_hover(positions)
 
 
 func generate_grid() -> void:
@@ -283,6 +298,8 @@ func move_unit(unit: Unit, target_pos: Vector2i):
 		end_turn()
 		
 func end_turn():
+	if resolving_turn_start:
+		return
 	clear_skill_state()
 	active_unit.set_selected(false)
 	active_unit = null
@@ -294,6 +311,8 @@ func end_turn():
 	start_unit_turn(turn_order[turn_index])
 	
 func handle_unit_clicked(unit: Unit):
+	if resolving_turn_start:
+		return
 	if(targeting_skill):
 		return
 	if(active_unit):
@@ -304,6 +323,8 @@ func handle_unit_clicked(unit: Unit):
 	active_unit.set_selected(true)
 	
 func handle_tile_clicked(pos: Vector2i):
+	if resolving_turn_start:
+		return
 	if(active_unit == null):
 		return
 	if tiles[pos] not in target_tiles && (active_skill == null || !active_skill.instant_cast()):
@@ -404,6 +425,8 @@ func show_affected_tiles(target_positions: Array[Vector2i]):
 		tiles[target].set_attack_warning()
 	
 func handle_move_pressed(is_skill = false): 
+	if resolving_turn_start:
+		return
 	if active_unit == null:
 		return
 	if not is_skill:
@@ -413,6 +436,8 @@ func handle_move_pressed(is_skill = false):
 	calculate_move_range(active_unit)
 
 func handle_skill_pressed(skill_number: int, action: Action):
+	if resolving_turn_start:
+		return
 	if active_unit == null:
 		return
 	var skill := active_unit.skills[skill_number]
@@ -517,10 +542,12 @@ func initialize_turn_order():
 	turn_index = 0
 
 func start_unit_turn(unit: Unit):
+	resolving_turn_start = true
 	active_unit = unit
 	active_unit.clear_temp_health()
 	for skill in unit.skills:
-		skill.on_owner_turn_start(self)
+		await skill.on_owner_turn_start(self)
+	resolving_turn_start = false
 	
 	if unit.get_status_stacks(Unit.EFFECTS.STUNNED) > 0:
 		unit.remove_status(Unit.EFFECTS.STUNNED)
@@ -578,9 +605,12 @@ func add_aoe_effect(effect, positions: Array[Vector2i]) -> Array[Vector2i]:
 		if previous_effect != null:
 			if previous_effect.has_method("remove_aoe_position"):
 				previous_effect.remove_aoe_position(self, position)
-		aoe_tile_owners[position] = effect
 		valid_positions.append(position)
-	if effect not in active_aoe_effects:
+	# Finish removing old zones before registering new ownership: an emptied
+	# zone can unregister its effect, including when that effect is being recast.
+	for position in valid_positions:
+		aoe_tile_owners[position] = effect
+	if not valid_positions.is_empty() and effect not in active_aoe_effects:
 		active_aoe_effects.append(effect)
 	return valid_positions
 

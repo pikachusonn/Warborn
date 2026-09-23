@@ -67,7 +67,7 @@ func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i
 	var all_units = (grid_field.player_units + grid_field.enemy_units)
 	var targets := grid_field.get_units_on_tiles(target_positions, all_units)
 	for target in targets:
-		if target == unit:
+		if target.side == unit.side:
 			continue
 		target.take_damage(damage)
 		target.shake()

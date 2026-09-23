@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://biayxeen356f7"
-path="res://.godot/imported/ob_sprite.png-9d8da00ccfb2bfc883c1f72269c8d1e3.ctex"
+uid="uid://dtgy8rkjeaqix"
+path="res://.godot/imported/cloud.png-745f4425b75b8453c6dbf2ecf571b21b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ob_sprite.png"
-dest_files=["res://.godot/imported/ob_sprite.png-9d8da00ccfb2bfc883c1f72269c8d1e3.ctex"]
+source_file="res://assets/odin_blessing/cloud.png"
+dest_files=["res://.godot/imported/cloud.png-745f4425b75b8453c6dbf2ecf571b21b.ctex"]
 
 [params]
 

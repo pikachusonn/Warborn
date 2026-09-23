@@ -4,4 +4,6 @@
 
 [resource]
 script = ExtResource("1_q6oce")
+skill_name = "Odin's Blessing"
+damage = 20
 metadata/_custom_type_script = "uid://md3k8nm6gr63"

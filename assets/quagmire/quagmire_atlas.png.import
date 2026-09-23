@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c1vxb4awvuvlp"
-path="res://.godot/imported/odin's blessing.png-d9239bfb89ec82274216dab67b49f8c3.ctex"
+uid="uid://bmu7s2uhbaoen"
+path="res://.godot/imported/quagmire_atlas.png-d5d15e9b15ec290d75e5d880dc59d193.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/odin's blessing.png"
-dest_files=["res://.godot/imported/odin's blessing.png-d9239bfb89ec82274216dab67b49f8c3.ctex"]
+source_file="res://assets/quagmire/quagmire_atlas.png"
+dest_files=["res://.godot/imported/quagmire_atlas.png-d5d15e9b15ec290d75e5d880dc59d193.ctex"]
 
 [params]
 

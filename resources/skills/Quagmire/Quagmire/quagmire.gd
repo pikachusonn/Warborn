@@ -1,6 +1,18 @@
 extends Skill
 class_name Quagmire
 
+const TILE_TEXTURES = [
+	preload("res://assets/quagmire/tile_0_0.tres"),
+	preload("res://assets/quagmire/tile_1_0.tres"),
+	preload("res://assets/quagmire/tile_2_0.tres"),
+	preload("res://assets/quagmire/tile_0_1.tres"),
+	preload("res://assets/quagmire/tile_1_1.tres"),
+	preload("res://assets/quagmire/tile_2_1.tres"),
+	preload("res://assets/quagmire/tile_0_2.tres"),
+	preload("res://assets/quagmire/tile_1_2.tres"),
+	preload("res://assets/quagmire/tile_2_2.tres"),
+]
+
 var mud_pillar_skill: Mud_Pillar
 var owner: Unit = null
 var hovered_pillar: Vector2i = Vector2i(-1, -1)
@@ -70,10 +82,17 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 	grid_field.unit_panel.clear_skill_active()
 	
 func create_quagmire_zone(grid_field: GridField, zone_tiles: Array[Vector2i]) -> void:
+	if zone_tiles.is_empty():
+		return
+	# Keep the original top-left even when the board clips the zone's edges.
+	var origin := zone_tiles[0]
 	var claimed_tiles := grid_field.add_aoe_effect(self, zone_tiles)
+	if claimed_tiles.is_empty():
+		return
 	active_zones.append({ "tiles": claimed_tiles, "turns": zone_duration })
 	for pos in claimed_tiles:
-		grid_field.tiles[pos].show_quagmire(owner.side)
+		var offset := pos - origin
+		grid_field.tiles[pos].show_quagmire(owner.side, TILE_TEXTURES[offset.y * 3 + offset.x])
 		
 func remove_aoe_position(grid_field: GridField, position: Vector2i) -> void:
 	var empty_zones: Array[Dictionary] = []
@@ -116,6 +135,14 @@ func is_position_in_quagmire(pos: Vector2i) -> bool:
 			return true
 	return false
 	
+func get_aoe_zone_tiles(pos: Vector2i) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for zone in active_zones:
+		if pos in zone["tiles"]:
+			result.assign(zone["tiles"])
+			break
+	return result
+
 func affects_position(pos: Vector2i) -> bool:
 	for zone in active_zones:
 		if pos in zone["tiles"]:
