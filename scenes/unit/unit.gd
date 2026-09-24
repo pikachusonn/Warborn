@@ -44,9 +44,10 @@ const LIVING_Z_INDEX := 3
 @onready var speech_label: Label = $SpeechBubble/Label
 @onready var temp_hp_overlay: ColorRect = $HPBar/TempHPOverlay
 @onready var shield_loss_preview: ColorRect = $HPBar/ShieldLossPreview
-@onready var health_loss_preview: ColorRect = $HPBar/HealthLossPreview
+@onready var health_loss_preview: Panel = $HPBar/HealthLossPreview
 @onready var healing_preview: ColorRect = $HPBar/HealingPreview
 @onready var hp_label: Label = $HPBar/HPLabel
+@onready var preview_amount_label: Label = $PreviewAmount
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -187,6 +188,15 @@ func show_health_preview(damage_amount: int, healing_amount: int) -> void:
 		healing_preview.position = Vector2(bar_width * float(current_health) / float(max_health), 0)
 		healing_preview.size = Vector2(bar_width * float(actual_healing) / float(max_health), bar_height)
 		healing_preview.show()
+	var actual_damage := shield_absorbed + health_damage
+	if actual_damage > 0:
+		preview_amount_label.text = "-%d" % actual_damage
+		preview_amount_label.modulate = Color(1, 0.2, 0.24)
+		preview_amount_label.show()
+	elif actual_healing > 0:
+		preview_amount_label.text = "+%d" % actual_healing
+		preview_amount_label.modulate = Color(0.38, 0.86, 0.42)
+		preview_amount_label.show()
 
 func clear_health_preview() -> void:
 	var restore_hp_bar := health_preview_active
@@ -194,6 +204,7 @@ func clear_health_preview() -> void:
 	shield_loss_preview.hide()
 	health_loss_preview.hide()
 	healing_preview.hide()
+	preview_amount_label.hide()
 	if restore_hp_bar:
 		update_hp_bar()
 	if not hovered_for_ui:
