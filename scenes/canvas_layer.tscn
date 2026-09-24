@@ -3,7 +3,10 @@
 [ext_resource type="Script" uid="uid://bix5nql604kkn" path="res://scenes/unit_panel.gd" id="1_c4rma"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ex8h3"]
-bg_color = Color(0.40392157, 0.7372549, 0.28235295, 1)
+bg_color = Color(0.18, 0.9, 0.32, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_background"]
+bg_color = Color(0.1584723, 0.15847233, 0.1584723, 1)
 
 [node name="CanvasLayer" type="CanvasLayer" unique_id=31058534]
 
@@ -74,6 +77,7 @@ size_flags_horizontal = 3
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_styles/background = SubResource("StyleBoxFlat_health_background")
 theme_override_styles/fill = SubResource("StyleBoxFlat_ex8h3")
 value = 100.0
 show_percentage = false

@@ -24,15 +24,8 @@ func begin(
 func show_deploy_tiles(
 	grid_field: GridField
 ) -> void:
-	var all_units = grid_field.player_units + grid_field.enemy_units
-
 	for pos in grid_field.tiles:
-		var occupied := false
-		for unit in all_units:
-			if unit.grid_position == pos:
-				occupied = true
-				break
-		if occupied:
+		if grid_field.is_tile_occupied(pos):
 			continue
 		var tile = grid_field.tiles[pos]
 		tile.set_attackable(true)

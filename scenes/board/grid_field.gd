@@ -45,6 +45,7 @@ var skill_preview_nodes: Array[Node] = []
 var impact_preview_tiles: Array = []
 var current_action := Action.NONE
 var projectile_blockers: Dictionary = {}
+var movement_blockers: Dictionary = {}
 var bouncing_pads: Dictionary[Vector2i, Hunter_kit] = {}
 var active_aoe_effects: Array = []
 var aoe_tile_owners: Dictionary = {}
@@ -139,9 +140,11 @@ func _process(_delta: float) -> void:
 			hovered_unit = null
 		if targeting_skill and active_skill and active_unit:
 			active_skill.update_preview(self, active_unit)
+		update_health_previews()
 		return
 	if active_skill and active_unit and targeting_skill:
 		active_skill.update_preview(self, active_unit)
+	update_health_previews()
 	var tile = tiles[grid_pos]
 	if tile == hovered_tile:
 		update_aoe_hover(grid_pos)
@@ -162,6 +165,21 @@ func clear_hover() -> void:
 	if hovered_tile:
 		hovered_tile.set_hovered(false)
 		hovered_tile = null
+
+func update_health_previews() -> void:
+	var preview_positions: Array[Vector2i] = []
+	var preview_tiles := impact_preview_tiles if not impact_preview_tiles.is_empty() else target_tiles
+	for tile in preview_tiles:
+		preview_positions.append(tile.grid_position)
+	for unit in player_units + enemy_units:
+		unit.clear_health_preview()
+		if not targeting_skill or active_skill == null or active_unit == null:
+			continue
+		if unit.grid_position not in preview_positions:
+			continue
+		var preview_damage := active_skill.get_preview_damage(self, active_unit, unit)
+		var preview_healing := active_skill.get_preview_healing(self, active_unit, unit)
+		unit.show_health_preview(preview_damage, preview_healing)
 
 func update_aoe_hover(position: Vector2i) -> void:
 	var highlighted: Array[Vector2i] = []
@@ -227,7 +245,7 @@ func update_hovered_unit(tile: TileScene):
 	hovered_unit = null
 	var all_units = player_units + enemy_units
 	for unit in all_units:
-		if unit.grid_position == tile.grid_position:
+		if not unit.is_defeated() and unit.grid_position == tile.grid_position:
 			hovered_unit = unit
 			hovered_unit.set_hovered(true)
 			return
@@ -277,6 +295,8 @@ func show_impact_preview(positions: Array[Vector2i]) -> void:
 func move_unit(unit: Unit, target_pos: Vector2i):
 	if not tiles.has(target_pos):
 		return
+	if is_tile_occupied(target_pos, unit):
+		return
 	#First movement is free
 	if free_movement:
 		free_movement = false
@@ -301,19 +321,30 @@ func end_turn():
 	if resolving_turn_start:
 		return
 	clear_skill_state()
-	active_unit.set_selected(false)
+	if active_unit:
+		active_unit.set_selected(false)
 	active_unit = null
 	unit_panel.hide()
-	turn_index += 1
-	if turn_index >= turn_order.size():
-		turn_index = 0
+	if not advance_to_next_living_unit():
+		update_unit_visuals()
+		return
 	update_unit_visuals()
 	start_unit_turn(turn_order[turn_index])
+
+func advance_to_next_living_unit() -> bool:
+	for offset in range(1, turn_order.size() + 1):
+		var candidate_index := (turn_index + offset) % turn_order.size()
+		if not turn_order[candidate_index].is_defeated():
+			turn_index = candidate_index
+			return true
+	return false
 	
 func handle_unit_clicked(unit: Unit):
 	if resolving_turn_start:
 		return
 	if(targeting_skill):
+		return
+	if unit.is_defeated():
 		return
 	if(active_unit):
 		active_unit.set_selected(false)	
@@ -329,6 +360,8 @@ func handle_tile_clicked(pos: Vector2i):
 		return
 	if tiles[pos] not in target_tiles && (active_skill == null || !active_skill.instant_cast()):
 		print("invalid position: ", tiles[pos], pos)
+		if targeting_skill:
+			active_unit.show_speech("Can't reach there")
 		return;
 	match current_action:
 		Action.MOVE:
@@ -369,6 +402,7 @@ func clear_skill_state():
 	clear_target_tiles()
 	targeting_skill = false
 	current_action = Action.NONE
+	update_health_previews()
 	
 func calculate_move_range(unit: Unit, diagonal = false):
 	clear_move_range()
@@ -394,6 +428,8 @@ func calculate_move_range(unit: Unit, diagonal = false):
 		for step in range(1, mobility + 1):
 			var target = current_pos + direction * step
 			if not tiles.has(target):
+				break
+			if is_tile_occupied(target, unit):
 				break
 			var tile = tiles[target]
 			tile.set_moveable(true)
@@ -494,7 +530,7 @@ func get_skill_distance(unit: Unit) -> int:
 func get_units_on_tiles(target_positions: Array[Vector2i], units: Array[Unit]) -> Array[Unit]:
 	var targets: Array[Unit] = []
 	for unit in units:
-		if unit.grid_position in target_positions:
+		if not unit.is_defeated() and unit.grid_position in target_positions:
 			targets.append(unit)
 	return targets
 	
@@ -529,7 +565,8 @@ func play_skill_presentation(
 	
 func start_combat():
 	initialize_turn_order()
-	start_unit_turn(turn_order[turn_index])
+	if not turn_order.is_empty():
+		start_unit_turn(turn_order[turn_index])
 
 func initialize_turn_order():
 	turn_order.clear()
@@ -542,12 +579,19 @@ func initialize_turn_order():
 	turn_index = 0
 
 func start_unit_turn(unit: Unit):
+	if unit.is_defeated():
+		if advance_to_next_living_unit():
+			start_unit_turn(turn_order[turn_index])
+		return
 	resolving_turn_start = true
 	active_unit = unit
 	active_unit.clear_temp_health()
 	for skill in unit.skills:
 		await skill.on_owner_turn_start(self)
 	resolving_turn_start = false
+	if unit.is_defeated():
+		end_turn()
+		return
 	
 	if unit.get_status_stacks(Unit.EFFECTS.STUNNED) > 0:
 		unit.remove_status(Unit.EFFECTS.STUNNED)
@@ -557,6 +601,9 @@ func start_unit_turn(unit: Unit):
 		return
 		
 	apply_aoe_effects(unit)
+	if unit.is_defeated():
+		end_turn()
+		return
 	
 	energy = 1
 	free_movement = true
@@ -581,6 +628,26 @@ func get_projectile_blocker(tile: Vector2i, unit: Unit):
 
 func get_tile_center(pos: Vector2i) -> Vector2:
 	return tiles[pos].global_position + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0)
+
+func add_movement_blocker(pos: Vector2i, blocker) -> void:
+	movement_blockers[pos] = blocker
+
+func remove_movement_blocker(pos: Vector2i, blocker = null) -> void:
+	if blocker != null and movement_blockers.get(pos) != blocker:
+		return
+	movement_blockers.erase(pos)
+
+func is_tile_occupied(
+	pos: Vector2i,
+	ignored_unit: Unit = null,
+	include_active_area := false
+) -> bool:
+	for unit in player_units + enemy_units:
+		if unit != ignored_unit and not unit.is_defeated() and unit.grid_position == pos:
+			return true
+	if movement_blockers.has(pos):
+		return true
+	return include_active_area and aoe_tile_owners.has(pos)
 	
 func add_bouncing_pad(pos: Vector2i, pad: Hunter_kit) -> void:
 	bouncing_pads[pos] = pad

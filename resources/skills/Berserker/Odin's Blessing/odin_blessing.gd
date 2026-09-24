@@ -89,13 +89,13 @@ func resolve_zone(grid_field: GridField, positions: Array[Vector2i]) -> void:
 	if not is_instance_valid(owner):
 		return
 	for target in grid_field.player_units + grid_field.enemy_units:
-		if target == owner or target.grid_position not in positions:
+		if target.is_defeated() or target == owner or target.grid_position not in positions:
 			continue
 		if target.side == owner.side:
 			continue
 		target.take_damage(damage)
 		target.shake()
-	if owner.grid_position in positions:
+	if not owner.is_defeated() and owner.grid_position in positions:
 		owner.add_temp_health(roundi(owner.data.health * shield_fraction), grid_field)
 		owner.shake()
 

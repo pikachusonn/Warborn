@@ -65,7 +65,7 @@ func _process(delta: float) -> void:
 func update_cleared_tiles(grid: GridField) -> void:
 	var next_cleared: Array[Vector2i] = []
 	for unit in grid.player_units + grid.enemy_units:
-		if not is_instance_valid(unit) or unit.grid_position not in tiles:
+		if not is_instance_valid(unit) or unit.is_defeated() or unit.grid_position not in tiles:
 			continue
 		var tile = grid.tiles.get(unit.grid_position)
 		var in_attack_range: bool = grid.targeting_skill and (

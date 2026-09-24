@@ -5,12 +5,15 @@ func begin(grid_field: GridField, unit: Unit) -> void:
 	if(grid_field.energy == 0):
 		grid_field.end_turn()
 		return
+	grid_field.targeting_skill = true
 	var is_ally_archer := unit in grid_field.player_units
 	var enemies := grid_field.enemy_units if is_ally_archer else grid_field.player_units
 	var allies := grid_field.player_units if is_ally_archer else grid_field.enemy_units
 	grid_field.target_tiles.clear()
 	#Enemies marks
 	for target in enemies:
+		if target.is_defeated():
+			continue
 		var stacks := target.get_status_stacks(Unit.EFFECTS.ENEMY_ARCHER_MARK)
 		if stacks <= 0:
 			continue
@@ -19,6 +22,8 @@ func begin(grid_field: GridField, unit: Unit) -> void:
 	
 	#Allies marks
 	for target in allies:
+		if target.is_defeated():
+			continue
 		var stacks := target.get_status_stacks(Unit.EFFECTS.ALLY_ARCHER_MARK)
 		if stacks <= 0:
 			continue
@@ -30,6 +35,7 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 		return
 	if grid_field.tiles[pos] not in grid_field.target_tiles:
 		return
+	grid_field.targeting_skill = false
 	await execute(grid_field, unit, [], Vector2i.ZERO, 1)
 	reset_targets_visuals(grid_field, unit)
 	grid_field.energy -= 1
@@ -49,13 +55,33 @@ func execute(
 	var allies_units := (grid_field.player_units if is_ally_archer else grid_field.enemy_units)
 	
 	for target in target_units:
-		target.take_damage(damage * target.get_status_stacks(Unit.EFFECTS.ENEMY_ARCHER_MARK))
+		if target.is_defeated():
+			continue
+		var stacks := target.get_status_stacks(Unit.EFFECTS.ENEMY_ARCHER_MARK)
+		if stacks <= 0:
+			continue
+		target.take_damage(damage * stacks)
 		target.remove_status(Unit.EFFECTS.ENEMY_ARCHER_MARK)
 		target.shake()
 	for target in allies_units:
-		target.heal(5 * target.get_status_stacks(Unit.EFFECTS.ALLY_ARCHER_MARK))
+		if target.is_defeated():
+			continue
+		var stacks := target.get_status_stacks(Unit.EFFECTS.ALLY_ARCHER_MARK)
+		if stacks <= 0:
+			continue
+		target.heal(5 * stacks)
 		target.remove_status(Unit.EFFECTS.ALLY_ARCHER_MARK)
 		target.shake()
+
+func get_preview_damage(_grid: GridField, unit: Unit, target: Unit) -> int:
+	if target.side == unit.side:
+		return 0
+	return damage * target.get_status_stacks(Unit.EFFECTS.ENEMY_ARCHER_MARK)
+
+func get_preview_healing(_grid: GridField, unit: Unit, target: Unit) -> int:
+	if target.side != unit.side:
+		return 0
+	return 5 * target.get_status_stacks(Unit.EFFECTS.ALLY_ARCHER_MARK)
 		
 		
 func reset_targets_visuals(grid_field: GridField, unit: Unit) -> void:

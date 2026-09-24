@@ -15,7 +15,10 @@ animations = []
 size = Vector2(64, 64)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fvc8g"]
-bg_color = Color(0.40392157, 0.7372549, 0.28235295, 1)
+bg_color = Color(0.1584723, 0.15847233, 0.1584723, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_fill"]
+bg_color = Color(0.18, 0.9, 0.32, 1)
 
 [node name="Unit" type="Node2D" unique_id=1432069053]
 script = ExtResource("1_btf8p")
@@ -43,6 +46,7 @@ offset_right = 32.0
 offset_bottom = -37.0
 grow_horizontal = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_fvc8g")
+theme_override_styles/fill = SubResource("StyleBoxFlat_health_fill")
 show_percentage = false
 
 [node name="TempHPOverlay" type="ColorRect" parent="HPBar" unique_id=1635694527]
@@ -50,6 +54,24 @@ layout_mode = 0
 offset_bottom = 27.0
 mouse_filter = 2
 color = Color(0.8117647, 0.654902, 0.32156864, 0.6862745)
+
+[node name="ShieldLossPreview" type="ColorRect" parent="HPBar" unique_id=1625059099]
+visible = false
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.8117647, 0.654902, 0.32156864, 0.35)
+
+[node name="HealthLossPreview" type="ColorRect" parent="HPBar" unique_id=438295866]
+visible = false
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.84313726, 0.15294118, 0.15686275, 0.9411765)
+
+[node name="HealingPreview" type="ColorRect" parent="HPBar" unique_id=2134582712]
+visible = false
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.18, 0.9, 0.32, 0.45)
 
 [node name="HPLabel" type="Label" parent="HPBar" unique_id=1337832243]
 z_index = 1000

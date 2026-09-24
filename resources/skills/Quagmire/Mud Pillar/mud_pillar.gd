@@ -19,7 +19,6 @@ func begin(grid_field: GridField, unit: Unit) -> void:
 func show_valid_tiles(grid_field: GridField, unit: Unit) -> void:
 	grid_field.clear_target_tiles()
 	var max_range := 3
-	var all_units = grid_field.player_units + grid_field.enemy_units
 
 	for pos in grid_field.tiles:
 		var offset := pos - unit.grid_position
@@ -27,13 +26,7 @@ func show_valid_tiles(grid_field: GridField, unit: Unit) -> void:
 		if abs(offset.x) > max_range || abs(offset.y) > max_range:
 			continue
 
-		var occupied := false
-		for target in all_units:
-			if target.grid_position == pos:
-				occupied = true
-				break
-
-		if occupied:
+		if grid_field.is_tile_occupied(pos, null, true):
 			continue
 
 		var tile = grid_field.tiles[pos]
@@ -47,6 +40,8 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 		return
 	if active_pillars.size() >= max_pillars:
 		return
+	if grid_field.is_tile_occupied(pos, null, true):
+		return
 	await execute(grid_field, unit, [pos], Vector2i.ZERO, 1)
 	grid_field.energy -= 1
 	grid_field.unit_panel.update_energy(grid_field.energy)
@@ -57,6 +52,8 @@ func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i
 	if target_positions.is_empty():
 		return
 	var pos := target_positions[0]
+	if grid_field.is_tile_occupied(pos, null, true):
+		return
 	# add movement blocker to grid
 	create_pillar_visual(grid_field, pos)
 	pillar_rounds[pos] = pillar_duration
@@ -71,10 +68,12 @@ func create_pillar_visual(grid_field: GridField, pos: Vector2i) -> void:
 	grid_field.add_child(pillar)
 	pillar.global_position = grid_field.get_tile_center(pos)
 	active_pillars[pos] = pillar
+	grid_field.add_movement_blocker(pos, pillar)
 	
 func remove_pillar(grid_field: GridField, pos: Vector2i) -> void:
 	if active_pillars.has(pos):
 		var pillar := active_pillars[pos]
+		grid_field.remove_movement_blocker(pos, pillar)
 		if is_instance_valid(pillar):
 			pillar.queue_free()
 	active_pillars.erase(pos)

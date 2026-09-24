@@ -115,6 +115,9 @@ func get_target_tiles(
 func get_total_damage() -> int:
 	return damage + execute_damage_bonus
 
+func get_preview_damage(_grid: GridField, unit: Unit, target: Unit) -> int:
+	return get_total_damage() if target.side != unit.side else 0
+
 
 func add_damage_bonus(amount: int) -> void:
 	execute_damage_bonus += amount

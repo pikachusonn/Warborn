@@ -59,6 +59,8 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i], _direction: Vector2i, _distance: int) -> void:
 	var all_units = grid_field.player_units + grid_field.enemy_units
 	for target in all_units:
+		if target.is_defeated():
+			continue
 		if target.grid_position not in target_positions:
 			continue
 		if target.side == unit.side:

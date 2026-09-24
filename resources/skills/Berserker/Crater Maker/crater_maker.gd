@@ -62,6 +62,16 @@ func get_impact_tiles(
 			if grid_field.tiles.has(pos):
 				impact_tiles.append(pos)
 	return impact_tiles
+
+func show_preview(
+	grid_field: GridField,
+	_unit: Unit,
+	_direction: Vector2i
+) -> void:
+	if grid_field.hovered_tile == null or grid_field.hovered_tile not in grid_field.target_tiles:
+		grid_field.clear_impact_preview()
+		return
+	grid_field.show_impact_preview(get_impact_tiles(grid_field, grid_field.hovered_tile.grid_position))
 	
 func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i], _direction: Vector2i, _distance: int) -> void:
 	var all_units = (grid_field.player_units + grid_field.enemy_units)

@@ -149,7 +149,7 @@ func execute(grid_field: GridField, _unit: Unit, target_positions: Array[Vector2
 	var affected_units: Array[Unit] = []
 
 	for target in all_units:
-		if target.grid_position in target_positions:
+		if not target.is_defeated() and target.grid_position in target_positions:
 			affected_units.append(target)
 
 	affected_units.sort_custom(func(a: Unit, b: Unit):
@@ -162,12 +162,7 @@ func execute(grid_field: GridField, _unit: Unit, target_positions: Array[Vector2
 			var next_pos := destination + direction
 			if not grid_field.tiles.has(next_pos):
 				break
-			var occupied := false
-			for other in all_units:
-				if other != target && other.grid_position == next_pos:
-					occupied = true
-					break
-			if occupied:
+			if grid_field.is_tile_occupied(next_pos, target):
 				break
 			destination = next_pos
 		if destination == target.grid_position:

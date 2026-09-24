@@ -40,6 +40,12 @@ func show_preview(grid: GridField, unit: Unit, direction: Vector2i):
 func instant_cast() -> bool:
 	return false
 
+func get_preview_damage(_grid: GridField, unit: Unit, target: Unit) -> int:
+	return damage if target.side != unit.side else 0
+
+func get_preview_healing(_grid: GridField, _unit: Unit, _target: Unit) -> int:
+	return 0
+
 func on_owner_turn_start(grid: GridField):
 	pass
 	

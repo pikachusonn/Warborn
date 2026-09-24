@@ -24,6 +24,12 @@ var grid_position: Vector2i
 var is_selected := false
 var status_effects: Dictionary = {}
 var status_tooltip: StatusTooltip
+var health_preview_active := false
+var hovered_for_ui := false
+
+const DEFEATED_OPACITY := 0.5
+const DEFEATED_Z_INDEX := 2
+const LIVING_Z_INDEX := 3
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @export var ally_sprite_frames: SpriteFrames
@@ -37,6 +43,9 @@ var status_tooltip: StatusTooltip
 @onready var speech_bubble: PanelContainer = $SpeechBubble
 @onready var speech_label: Label = $SpeechBubble/Label
 @onready var temp_hp_overlay: ColorRect = $HPBar/TempHPOverlay
+@onready var shield_loss_preview: ColorRect = $HPBar/ShieldLossPreview
+@onready var health_loss_preview: ColorRect = $HPBar/HealthLossPreview
+@onready var healing_preview: ColorRect = $HPBar/HealingPreview
 @onready var hp_label: Label = $HPBar/HPLabel
 
 # Called when the node enters the scene tree for the first time.
@@ -53,6 +62,7 @@ func _process(delta: float) -> void:
 	pass
 
 func setup(pos: Vector2i, unit_data: UnitData, unit_side):
+	z_index = LIVING_Z_INDEX
 	grid_position = pos
 	data = unit_data
 	skills = []
@@ -137,25 +147,97 @@ func update_hp_bar() -> void:
 	temp_hp_overlay.visible = shield_health > 0
 	
 	hp_label.text = "%d/%d" % [real_health + shield_health, max_health]
+
+func show_health_preview(damage_amount: int, healing_amount: int) -> void:
+	clear_health_preview()
+	if is_defeated() or (damage_amount <= 0 and healing_amount <= 0):
+		return
+	update_hp_bar()
+	health_preview_active = true
+	hp_bar.show()
+	effects_wrapper.set_position(Vector2i(-32, -82))
+
+	var max_health := data.health
+	var bar_width := hp_bar.size.x
+	var bar_height := hp_bar.size.y
+	var shield_absorbed := mini(maxi(temp_health, 0), maxi(damage_amount, 0))
+	var health_damage := mini(current_health, maxi(damage_amount - shield_absorbed, 0))
+	var actual_healing := mini(maxi(healing_amount, 0), max_health - current_health)
+
+	if shield_absorbed > 0:
+		var shield_width := bar_width * minf(
+			float(temp_health) / float(max_health),
+			float(current_health) / float(max_health)
+		)
+		var absorbed_width := minf(
+			bar_width * float(shield_absorbed) / float(max_health),
+			shield_width
+		)
+		var remaining_shield_width := maxf(shield_width - absorbed_width, 0.0)
+		temp_hp_overlay.size.x = remaining_shield_width
+		shield_loss_preview.position = Vector2(remaining_shield_width, 0)
+		shield_loss_preview.size = Vector2(absorbed_width, bar_height)
+		shield_loss_preview.show()
+	if health_damage > 0:
+		var remaining_health := current_health - health_damage
+		health_loss_preview.position = Vector2(bar_width * float(remaining_health) / float(max_health), 0)
+		health_loss_preview.size = Vector2(bar_width * float(health_damage) / float(max_health), bar_height)
+		health_loss_preview.show()
+	if actual_healing > 0:
+		healing_preview.position = Vector2(bar_width * float(current_health) / float(max_health), 0)
+		healing_preview.size = Vector2(bar_width * float(actual_healing) / float(max_health), bar_height)
+		healing_preview.show()
+
+func clear_health_preview() -> void:
+	var restore_hp_bar := health_preview_active
+	health_preview_active = false
+	shield_loss_preview.hide()
+	health_loss_preview.hide()
+	healing_preview.hide()
+	if restore_hp_bar:
+		update_hp_bar()
+	if not hovered_for_ui:
+		hp_bar.hide()
+		effects_wrapper.set_position(Vector2i(-32, -52))
 	
 func take_damage(amount: int) -> void:
+	if is_defeated() or amount <= 0:
+		return
 	if temp_health > 0:
 		var absorbed = min(temp_health, amount)
 		temp_health -= absorbed
 		amount -= absorbed
 	if amount > 0:
-		current_health -= amount
+		current_health = max(current_health - amount, 0)
 	update_hp_bar()
+	if is_defeated():
+		set_defeated_visual()
 
 func heal(amount: int):
+	if is_defeated() or amount <= 0:
+		return
 	print('pre-heal: ', current_health)
 	current_health += amount;
 	current_health = min(current_health, data.health)
 	print(data.unit_name, " healed ", amount, " HP. HP: ", current_health)
+
+func is_defeated() -> bool:
+	return current_health <= 0
+
+func set_defeated_visual() -> void:
+	modulate.a = DEFEATED_OPACITY
+	z_index = DEFEATED_Z_INDEX
+	set_selected(false)
+	set_hovered(false)
 	
 func set_hovered(hovered: bool):
-	hp_bar.visible = hovered
-	if(hovered):
+	hovered_for_ui = hovered
+	if is_defeated():
+		hp_bar.hide()
+		effects_wrapper.set_position(Vector2i(-32, -52))
+		return
+	hp_bar.visible = hovered or health_preview_active
+	if hovered or health_preview_active:
 		update_hp_bar()
 		effects_wrapper.set_position(Vector2i(-32, -82))
 	else:
@@ -205,6 +287,8 @@ func show_speech(text: String, duration := 1.5) -> void:
 		speech_bubble.hide()
 	
 func add_temp_health(amount: int, grid: GridField) -> void:
+	if is_defeated() or amount <= 0:
+		return
 	temp_health += amount
 	update_hp_bar()
 	if (self == grid.active_unit):
