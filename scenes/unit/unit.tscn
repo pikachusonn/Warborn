@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://d1pdgypiav27d" path="res://scenes/unit/status_effect_icon.gd" id="4_0wuuu"]
 [ext_resource type="Texture2D" uid="uid://bai5l6043fr5p" path="res://assets/icons/enemy-arrow-icon.svg" id="4_3po7s"]
 [ext_resource type="Texture2D" uid="uid://7ylb5j5kujol" path="res://assets/icons/stun-icon.svg" id="4_vgvef"]
+[ext_resource type="Script" path="res://scenes/temp_health_overlay.gd" id="8_temp_health"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_0wuuu"]
 animations = []
@@ -60,16 +61,17 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_health_fill")
 show_percentage = false
 
 [node name="TempHPOverlay" type="ColorRect" parent="HPBar" unique_id=1635694527]
+script = ExtResource("8_temp_health")
 layout_mode = 0
 offset_bottom = 27.0
 mouse_filter = 2
-color = Color(0.8117647, 0.654902, 0.32156864, 0.6862745)
+color = Color(0.9647059, 0.83137256, 0.36078432, 0.9019608)
 
 [node name="ShieldLossPreview" type="ColorRect" parent="HPBar" unique_id=1625059099]
 visible = false
 layout_mode = 0
 mouse_filter = 2
-color = Color(0.8117647, 0.654902, 0.32156864, 0.35)
+color = Color(1, 0.5882353, 0.2, 0.78431374)
 
 [node name="HealthLossPreview" type="Panel" parent="HPBar" unique_id=438295866]
 visible = false
@@ -88,6 +90,9 @@ z_index = 1000
 layout_mode = 0
 offset_right = 64.0
 offset_bottom = 27.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.06, 0.06, 0.08, 1)
+theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 12
 horizontal_alignment = 1
 vertical_alignment = 1
