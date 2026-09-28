@@ -8,6 +8,8 @@
 [ext_resource type="Resource" uid="uid://cuxuirgbkvn5a" path="res://resources/units/Quagmire/Quagmire.tres" id="6_2lxyn"]
 [ext_resource type="PackedScene" uid="uid://cksexigk5bvbc" path="res://scenes/canvas_layer.tscn" id="6_4gtxg"]
 [ext_resource type="Resource" uid="uid://5vbwgiolhbpg" path="res://resources/units/Berserker/Berserker.tres" id="7_bkt86"]
+[ext_resource type="PackedScene" uid="uid://dmm8yt1uumivp" path="res://scenes/action_menu/radial_action_menu.tscn" id="8_km5jl"]
+[ext_resource type="Script" uid="uid://dfrpa66nytn3i" path="res://scenes/board/grass_background.gd" id="9_grass"]
 
 [node name="GridField" type="Node2D" unique_id=1515789650]
 script = ExtResource("1_mnn36")
@@ -18,7 +20,17 @@ archer_data = ExtResource("5_xmbel")
 quagmire_data = ExtResource("6_2lxyn")
 berserker_data = ExtResource("7_bkt86")
 
+[node name="GrassBackground" type="Node2D" parent="." unique_id=716506532]
+self_modulate = Color(0.7921569, 0.8352941, 0.79607844, 0.93333334)
+z_index = -1
+texture_filter = 1
+script = ExtResource("9_grass")
+
+[node name="RadialActionMenu" parent="." unique_id=1142914654 instance=ExtResource("8_km5jl")]
+z_index = 20
+
 [node name="Tile" parent="." unique_id=403099390 instance=ExtResource("2_7hqsk")]
+visible = false
 
 [node name="Unit" parent="." unique_id=1432069053 instance=ExtResource("3_7hqsk")]
 

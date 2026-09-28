@@ -8,6 +8,9 @@ enum Stage {
 var stage := Stage.MOVE
 @export var piercing_shot: Piercing_shot
 
+func get_tooltip_damage() -> int:
+	return piercing_shot.damage if piercing_shot != null else damage
+
 func begin(grid_field: GridField, unit: Unit) -> void:
 	if(grid_field.energy == 0):
 		grid_field.end_turn()

@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_tiq0y")
 skill_name = "Shield Bash"
+description = "Bash an adjacent enemy and stun them, causing them to lose their next turn."
 damage = 20
 cooldown = 2
 metadata/_custom_type_script = "uid://pjspwdh1ivbv"

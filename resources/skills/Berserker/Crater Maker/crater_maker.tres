@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_rr0lu")
 skill_name = "Crater Maker"
+description = "Leap to an empty tile up to 3 tiles away and damage enemies in the surrounding 3x3 area."
 damage = 15
 is_mobile = true
 cooldown = 3

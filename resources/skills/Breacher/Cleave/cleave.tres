@@ -6,6 +6,7 @@
 [resource]
 script = ExtResource("1_nw8fv")
 skill_name = "Cleave"
+description = "Strike the three tiles directly in front of you, damaging enemies in the area."
 damage = 30
 cutscene_texture = ExtResource("1_qyqlm")
 metadata/_custom_type_script = "uid://cf2ihfxtl8bpn"

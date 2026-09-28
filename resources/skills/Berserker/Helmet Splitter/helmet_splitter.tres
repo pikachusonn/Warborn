@@ -5,5 +5,6 @@
 [resource]
 script = ExtResource("1_po3kp")
 skill_name = "Helmet Splitter"
+description = "Strike enemies in a 3x1  area. Blood Lust can permanently increase this skill's damage after a kill."
 damage = 25
 metadata/_custom_type_script = "uid://dhex6vl85a1ch"

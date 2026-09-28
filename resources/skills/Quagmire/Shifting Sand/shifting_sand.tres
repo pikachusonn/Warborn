@@ -4,4 +4,6 @@
 
 [resource]
 script = ExtResource("1_p05u5")
+action_cost = 0
+description = "Consume a pillar and choose a direction. Push units in the selected line up to 5 tiles, stopping at occupied tiles or the board edge. Costs no action points."
 metadata/_custom_type_script = "uid://dkptv4kdimxl8"

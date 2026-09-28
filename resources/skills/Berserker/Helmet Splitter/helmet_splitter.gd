@@ -3,6 +3,9 @@ class_name Helmet_Splitter
 
 var execute_damage_bonus: int = 0
 
+func get_tooltip_damage() -> int:
+	return get_total_damage()
+
 func begin(
 	grid_field: GridField,
 	_unit: Unit

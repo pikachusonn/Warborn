@@ -30,6 +30,7 @@ var hovered_for_ui := false
 const DEFEATED_OPACITY := 0.5
 const DEFEATED_Z_INDEX := 2
 const LIVING_Z_INDEX := 3
+const DUST_BURST := preload("res://scenes/effects/dust_burst.tscn")
 
 @onready var sprite: AnimatedSprite2D = $AnimatedSprite2D
 @export var ally_sprite_frames: SpriteFrames
@@ -85,6 +86,19 @@ func setup(pos: Vector2i, unit_data: UnitData, unit_side):
 		64.0 / tex_size.y
 	)
 	sprite.scale = Vector2.ONE * scale_factor * 1.8
+
+func play_dust_burst(playback_fps: float = 12.0) -> void:
+	var burst := DUST_BURST.instantiate() as AnimatedSprite2D
+	burst.speed_scale = playback_fps / 12.0
+	get_parent().add_child(burst)
+	burst.position = position
+
+func play_spawn_effect() -> void:
+	sprite.hide()
+	play_dust_burst(7.0)
+	await get_tree().create_timer(0.35).timeout
+	if is_instance_valid(sprite) and not is_defeated():
+		sprite.show()
 	
 func set_active(active: bool):
 	if active:
@@ -102,8 +116,18 @@ func set_selected(selected: bool):
 	is_selected = selected
 	queue_redraw()
 	
+var move_targeting := false
+
+func set_move_targeting(value: bool) -> void:
+	if move_targeting != value:
+		move_targeting = value
+		queue_redraw()
+
 func _draw():
 	if not is_selected:
+		return
+	# The radial menu draws the red cancellation marker during move targeting.
+	if move_targeting:
 		return
 
 	draw_circle(
@@ -236,6 +260,7 @@ func is_defeated() -> bool:
 	return current_health <= 0
 
 func set_defeated_visual() -> void:
+	play_dust_burst()
 	modulate.a = DEFEATED_OPACITY
 	z_index = DEFEATED_Z_INDEX
 	set_selected(false)

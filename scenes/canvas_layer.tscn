@@ -1,15 +1,16 @@
 [gd_scene format=3 uid="uid://cksexigk5bvbc"]
 
 [ext_resource type="Script" uid="uid://bix5nql604kkn" path="res://scenes/unit_panel.gd" id="1_c4rma"]
-[ext_resource type="Script" path="res://scenes/temp_health_overlay.gd" id="2_temp_health"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ex8h3"]
-bg_color = Color(0.24, 0.72, 0.32, 1)
+[ext_resource type="Script" uid="uid://bfhgh1rjb5b63" path="res://scenes/temp_health_overlay.gd" id="2_temp_health"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_background"]
 bg_color = Color(0.1584723, 0.15847233, 0.1584723, 1)
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ex8h3"]
+bg_color = Color(0.24, 0.72, 0.32, 1)
+
 [node name="CanvasLayer" type="CanvasLayer" unique_id=31058534]
+visible = false
 
 [node name="BottomHUD" type="Panel" parent="." unique_id=1429654660]
 custom_minimum_size = Vector2(0, 200)
@@ -84,10 +85,10 @@ value = 100.0
 show_percentage = false
 
 [node name="TempHealthOverlay" type="ColorRect" parent="BottomHUD/HBoxContainer/VBoxContainer/HPBar" unique_id=1356218635]
-script = ExtResource("2_temp_health")
 layout_mode = 0
 offset_bottom = 30.0
 color = Color(0.8117647, 0.654902, 0.32156864, 0.6862745)
+script = ExtResource("2_temp_health")
 
 [node name="HPLabel" type="Label" parent="BottomHUD/HBoxContainer/VBoxContainer/HPBar" unique_id=879942647]
 layout_mode = 0

@@ -1,5 +1,6 @@
 extends Skill
 class_name Rend
+var resolving := false
 
 func begin(grid_field: GridField, unit: Unit) -> void:
 	if(grid_field.energy == 0):
@@ -31,17 +32,24 @@ func begin(grid_field: GridField, unit: Unit) -> void:
 		grid_field.target_tiles.append(grid_field.tiles[target.grid_position])
 
 func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
+	if resolving:
+		return
 	if not grid_field.tiles.has(pos):
 		return
 	if grid_field.tiles[pos] not in grid_field.target_tiles:
 		return
-	grid_field.targeting_skill = false
+	resolving = true
+	# The tile and unit can both receive this click. Keep targeting locked until
+	# input dispatch finishes so the unit callback cannot select the clicked ally.
+	await grid_field.get_tree().process_frame
 	await execute(grid_field, unit, [], Vector2i.ZERO, 1)
 	reset_targets_visuals(grid_field, unit)
+	grid_field.clear_skill_state()
 	grid_field.energy -= 1
 	grid_field.unit_panel.update_energy(grid_field.energy)
 	grid_field.clean_up_skill()
 	grid_field.unit_panel.clear_skill_active()
+	resolving = false
 
 func execute(
 	grid_field: GridField,

@@ -35,6 +35,9 @@ var active_unit: Unit
 var energy := 0
 var free_movement := false
 var resolving_turn_start := false
+var presenting_skill := false
+var radial_skills_open := false
+var radial_menu_owner: Unit
 # ================================
 # SKILLS / TARGETING
 # ================================
@@ -66,12 +69,11 @@ enum Action {
 var hovered_unit: Unit
 @onready var unit_panel: UnitPanel = $CanvasLayer/BottomHUD
 @onready var skill_cutscene: Control = $CanvasLayer/SkillCutscene
+@onready var radial_menu: Node2D = $RadialActionMenu
 
 func _ready() -> void:
-	var t: TileScene
-	position = get_viewport_rect().size / 2
-	position -= Vector2(WIDTH, HEIGHT) * TILE_SIZE / 2
-	position.y -= 100
+	update_board_layout()
+	get_viewport().size_changed.connect(update_board_layout)
 	players_characters = [
 		{
 			"data": breacher_data,
@@ -126,9 +128,100 @@ func _ready() -> void:
 	unit_panel.skill3_pressed.connect(handle_skill_pressed.bind(2, Action.SKILL3))
 	unit_panel.skill4_pressed.connect(handle_skill_pressed.bind(3, Action.SKILL4))
 	unit_panel.end_turn_pressed.connect(end_turn)
+	radial_menu.get_node("WheelBackGround").end_turn_pressed.connect(handle_radial_end_turn)
+	radial_menu.get_node("WheelBackGround").move_pressed.connect(handle_radial_move)
+	radial_menu.get_node("WheelBackGround").action_pressed.connect(open_radial_skills)
+	radial_menu.get_node("WheelBackGround").skill_pressed.connect(select_radial_skill)
+	radial_menu.get_node("MoveCancel").cancel_pressed.connect(cancel_radial_movement)
 	start_combat()
 
+func open_radial_skills() -> void:
+	if resolving_turn_start or not is_instance_valid(active_unit):
+		return
+	if active_skill != null:
+		return
+	radial_skills_open = true
+	update_radial_menu()
+
+func select_radial_skill(index: int) -> void:
+	if resolving_turn_start or not is_instance_valid(active_unit):
+		return
+	if not can_use_skill(index):
+		return
+	if active_skill != null and not targeting_skill:
+		return
+	handle_skill_pressed(index, [Action.SKILL1, Action.SKILL2, Action.SKILL3, Action.SKILL4][index])
+	update_radial_menu()
+
+func can_use_skill(index: int) -> bool:
+	if not is_instance_valid(active_unit) or index < 0 or index >= active_unit.skills.size():
+		return false
+	var skill: Skill = active_unit.skills[index]
+	return not skill.is_passive \
+		and skill.cooldown_remaining <= 0 \
+		and energy >= skill.get_action_cost() \
+		and skill.has_usable_target(active_unit) \
+		and (not skill.is_mobile or not are_mobility_skills_blocked(active_unit))
+
+func has_usable_skill() -> bool:
+	for index in range(active_unit.skills.size()):
+		if can_use_skill(index):
+			return true
+	return false
+
+func cancel_radial_movement() -> void:
+	if resolving_turn_start:
+		return
+	if active_skill != null and not targeting_skill:
+		return
+	if current_action != Action.MOVE and not radial_skills_open and not targeting_skill:
+		return
+	var return_to_skills := targeting_skill
+	if active_skill != null:
+		active_skill.cancel(self, active_unit)
+		active_skill = null
+	radial_skills_open = return_to_skills
+	clear_move_range()
+	clear_skill_state()
+	unit_panel.clear_skill_active()
+	update_radial_menu()
+
+func handle_radial_move() -> void:
+	if resolving_turn_start or not is_instance_valid(active_unit):
+		return
+	if active_unit.is_defeated() or (energy <= 0 and not free_movement):
+		return
+	if active_skill != null and not targeting_skill:
+		return
+	if active_skill != null:
+		active_skill.cancel(self, active_unit)
+		active_skill = null
+	clear_skill_state()
+	unit_panel.clear_skill_active()
+	handle_move_pressed()
+
+func handle_radial_end_turn() -> void:
+	if resolving_turn_start or not is_instance_valid(active_unit):
+		return
+	# Don't interrupt a skill that is already playing its attack presentation.
+	if active_skill != null and not targeting_skill:
+		return
+	if active_skill != null:
+		active_skill.cancel(self, active_unit)
+		active_skill = null
+	unit_panel.clear_skill_active()
+	end_turn()
+	update_radial_menu()
+
+func update_board_layout() -> void:
+	var viewport_size := get_viewport_rect().size
+	var board_size := viewport_size.y * 0.80
+	scale = Vector2.ONE * board_size / (HEIGHT * TILE_SIZE)
+	# Leave 11% above the board and 9% below.
+	position = Vector2((viewport_size.x - board_size) / 2.0, viewport_size.y * 0.11)
+
 func _process(_delta: float) -> void:
+	update_radial_menu()
 	var mouse_pos = get_global_mouse_position()
 	var local_mouse = to_local(mouse_pos)
 	var grid_pos = Vector2i(floori(local_mouse.x / TILE_SIZE), floori(local_mouse.y / TILE_SIZE))
@@ -165,6 +258,38 @@ func clear_hover() -> void:
 	if hovered_tile:
 		hovered_tile.set_hovered(false)
 		hovered_tile = null
+
+func update_radial_menu() -> void:
+	if radial_menu_owner != active_unit:
+		radial_skills_open = false
+		radial_menu_owner = active_unit
+	var moving := current_action == Action.MOVE
+	var skill_resolving := active_skill != null and not targeting_skill
+	var cancel_visible := (moving or radial_skills_open or targeting_skill) and not presenting_skill and not skill_resolving
+	for unit in player_units + enemy_units:
+		unit.set_move_targeting(cancel_visible and unit == active_unit)
+	if not is_instance_valid(active_unit):
+		radial_menu.hide()
+		return
+	if active_unit.is_defeated():
+		radial_menu.hide()
+		return
+	radial_menu.show()
+	radial_menu.position = active_unit.position
+	radial_menu.get_node("MoveCancel").visible = cancel_visible
+	var resources = radial_menu.get_node("TurnResources")
+	resources.visible = not presenting_skill and not skill_resolving
+	resources.set_resources(energy > 0, free_movement)
+	var wheel = radial_menu.get_node("WheelBackGround")
+	wheel.set_skills_mode(radial_skills_open)
+	var availability: Array[bool] = []
+	if radial_skills_open:
+		for index in range(4):
+			availability.append(can_use_skill(index))
+	wheel.set_skill_availability(availability)
+	wheel.visible = not moving and not targeting_skill and not presenting_skill and not skill_resolving
+	for node_name in ["Action", "Move", "EndTurn"]:
+		radial_menu.get_node(node_name).visible = wheel.visible and not radial_skills_open
 
 func update_health_previews() -> void:
 	var preview_positions: Array[Vector2i] = []
@@ -258,6 +383,7 @@ func spawn_character(data: UnitData, pos: Vector2i, side: Unit.Side):
 		data,
 		side
 	)
+	unit_instance.play_spawn_effect()
 	unit_instance.click_area.unit_clicked.connect(handle_unit_clicked)
 	if side == Unit.Side.PLAYER:
 		player_units.append(unit_instance)
@@ -387,9 +513,13 @@ func clear_move_range():
 
 func clean_up_skill(retain = false):
 	clear_move_range()
+	clear_skill_state()
 	active_skill = null
 	if energy == 0 && !free_movement && !retain:
 		end_turn()
+	else:
+		radial_skills_open = has_usable_skill()
+		update_radial_menu()
 
 func clear_target_tiles():
 	for tile in target_tiles:
@@ -523,7 +653,7 @@ func get_direction_to_mouse(position: Vector2, diagonal = false) -> Vector2i:
 func get_skill_distance(unit: Unit) -> int:
 	var mouse_pos := get_global_mouse_position()
 	var unit_pos := unit.global_position
-	var delta := mouse_pos - unit_pos
+	var delta := to_local(mouse_pos) - to_local(unit_pos)
 	var tile_distance = max(abs(delta.x), abs(delta.y)) / TILE_SIZE
 	return clampi(roundi(tile_distance), 1, 3)
 	
@@ -549,6 +679,8 @@ func play_skill_presentation(
 	skill: Skill,
 	target_positions: Array[Vector2i]
 ) -> void:
+	presenting_skill = true
+	update_radial_menu()
 	show_locked_tiles(target_positions)
 	await get_tree().create_timer(0.5).timeout
 	if skill.cutscene_texture:
@@ -562,6 +694,8 @@ func play_skill_presentation(
 	skill_cutscene.hide()
 	show_affected_tiles(target_positions)
 	await get_tree().create_timer(0.5).timeout
+	presenting_skill = false
+	update_radial_menu()
 	
 func start_combat():
 	initialize_turn_order()
@@ -627,7 +761,7 @@ func get_projectile_blocker(tile: Vector2i, unit: Unit):
 	return blocker
 
 func get_tile_center(pos: Vector2i) -> Vector2:
-	return tiles[pos].global_position + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0)
+	return tiles[pos].to_global(Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0))
 
 func add_movement_blocker(pos: Vector2i, blocker) -> void:
 	movement_blockers[pos] = blocker

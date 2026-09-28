@@ -8,6 +8,9 @@ var max_pillars := 3
 var pillar_duration := 3
 var range := 5
 
+func has_usable_target(_unit: Unit) -> bool:
+	return active_pillars.size() < max_pillars
+
 func begin(grid_field: GridField, unit: Unit) -> void:
 	if(grid_field.energy == 0):
 		grid_field.end_turn()

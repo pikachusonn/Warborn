@@ -4,6 +4,12 @@ class_name Rupture
 var mud_pillar_skill: Mud_Pillar
 var hovered_pillar: Vector2i = Vector2i(-1, -1)
 @export var temp_health := 30
+func has_usable_target(unit: Unit) -> bool:
+	for skill in unit.skills:
+		if skill is Mud_Pillar:
+			return not skill.active_pillars.is_empty()
+	return false
+
 func begin(grid_field: GridField, unit: Unit) -> void:
 	grid_field.targeting_skill = true
 	for skill in unit.skills:

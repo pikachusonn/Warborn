@@ -5,4 +5,5 @@
 [resource]
 script = ExtResource("2_n7oea")
 skill_name = "Bullwark"
+description = "Raise a directional barrier that blocks hostile projectiles until your next turn. The barrier follows you when you move."
 metadata/_custom_type_script = "uid://46h6ihorjk5j"

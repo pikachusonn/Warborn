@@ -2,6 +2,8 @@ extends Resource
 class_name Skill
 
 @export var skill_name: String
+@export_multiline var description: String
+@export_range(0, 1) var action_cost: int = 1
 @export var damage: int
 @export var cutscene_texture: Texture2D
 @export var cutscene_video: VideoStream
@@ -10,6 +12,15 @@ class_name Skill
 @export var is_passive: bool = false
 @export var cooldown: int = 0
 var cooldown_remaining: int = 0
+
+func get_action_cost() -> int:
+	return 0 if is_passive else action_cost
+
+func get_tooltip_damage() -> int:
+	return damage
+
+func has_usable_target(_unit: Unit) -> bool:
+	return true
 
 func begin(grid_field: GridField, unit: Unit):
 	pass

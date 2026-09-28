@@ -2,6 +2,9 @@ extends Skill
 class_name Hunter_kit
 
 var deployed := false
+
+func get_action_cost() -> int:
+	return 0 if deployed else action_cost
 var pad_position: Vector2i
 var owner: Unit = null
 

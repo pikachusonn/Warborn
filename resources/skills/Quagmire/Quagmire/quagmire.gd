@@ -20,6 +20,15 @@ var active_zones: Array[Dictionary] = []
 var zone_duration := 3
 var zone_damage := 10
 
+func get_tooltip_damage() -> int:
+	return zone_damage
+
+func has_usable_target(unit: Unit) -> bool:
+	for skill in unit.skills:
+		if skill is Mud_Pillar:
+			return not skill.active_pillars.is_empty()
+	return false
+
 func begin(grid_field: GridField, unit: Unit) -> void:
 	grid_field.targeting_skill = true
 	owner = unit

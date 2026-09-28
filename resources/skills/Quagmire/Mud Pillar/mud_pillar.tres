@@ -4,4 +4,5 @@
 
 [resource]
 script = ExtResource("1_nxi1b")
+description = "Create a mud pillar on an empty tile within 3 tiles. Pillars block movement, last 3 caster turns, and can be consumed by your other skills. Maximum 3 pillars."
 metadata/_custom_type_script = "uid://mbfd4ki66daf"

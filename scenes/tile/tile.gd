@@ -23,46 +23,49 @@ func set_hovered(val: bool) -> void:
 	if(is_hovered == val):
 		return
 	is_hovered = val;
+	queue_redraw()
 	
 func setup(cord: Vector2i): 
 	grid_position = cord;
 	position = Vector2(grid_position) * TILE_SIZE;
 	
 func _draw() -> void:
-	var fill = Color.WHITE if is_hovered else Color.DARK_SLATE_GRAY
-	var border = Color.WHITE
-	draw_rect(
-		Rect2(Vector2.ZERO, Vector2(TILE_SIZE, TILE_SIZE)), 
-		fill, 
-		true
-	)
-	draw_rect(
-		Rect2(Vector2.ZERO, Vector2(TILE_SIZE, TILE_SIZE)), 
-		border, 
-		false, 
-		2.0
-	)
+	if modulate != Color.WHITE:
+		# The tile art is on the board background, so targeting needs its own fill.
+		draw_rect(Rect2(Vector2.ZERO, Vector2(TILE_SIZE, TILE_SIZE)), Color(1, 1, 1, 0.5), true)
+	if is_hovered:
+		draw_rect(Rect2(Vector2.ZERO, Vector2(TILE_SIZE, TILE_SIZE)), Color(0.78, 0.78, 0.78, 0.25), true)
+	var grid_line := Color(1, 1, 1, 0.32)
+	if grid_position.x < 9:
+		draw_line(Vector2(TILE_SIZE, 0), Vector2(TILE_SIZE, TILE_SIZE), grid_line, 1.0)
+	if grid_position.y < 9:
+		draw_line(Vector2(0, TILE_SIZE), Vector2(TILE_SIZE, TILE_SIZE), grid_line, 1.0)
 
 func set_moveable(val: bool):
 	if val:
 		modulate = Color(0.5, 0.8, 1)
 	else: 
 		modulate = Color.WHITE
+	queue_redraw()
 		
 func set_attackable(val: bool):
 	if val:
 		modulate = Color(1.0, 0.8, 0.3)
 	else:
 		modulate = Color.WHITE
+	queue_redraw()
 		
 func set_attack_preview():
 	modulate = Color(1.0, 0.8, 0.3)
+	queue_redraw()
 
 func set_attack_warning():
 	modulate = Color(1.0, 0.2, 0.2)
+	queue_redraw()
 
 func clear_attack():
 	modulate = Color.WHITE
+	queue_redraw()
 		
 func _on_clicked():
 	tile_clicked.emit(grid_position)

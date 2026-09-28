@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_qm77m")
 skill_name = "Piercing Shot"
+description = "Fire through a line of enemies, dealing damage and applying enemy marks. Allies in the line gain ally marks. A friendly bouncing pad can redirect the shot."
 damage = 15
 is_projectile = true
 metadata/_custom_type_script = "uid://cw18ymvyrng4w"

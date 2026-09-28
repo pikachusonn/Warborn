@@ -1,0 +1,54 @@
+[gd_scene format=3 uid="uid://dmm8yt1uumivp"]
+
+[ext_resource type="Texture2D" uid="uid://2tf65tdogk44" path="res://assets/icons/action_menu/fist.png" id="1_cguou"]
+[ext_resource type="Script" uid="uid://b3by8mi4df6p4" path="res://scenes/action_menu/wheel_background.gd" id="1_uq5ag"]
+[ext_resource type="Texture2D" uid="uid://bmd8rcaw62bgi" path="res://assets/icons/action_menu/boots.png" id="2_uq5ag"]
+[ext_resource type="Texture2D" uid="uid://djevfesvnrbjx" path="res://assets/icons/action_menu/cancel.png" id="3_1bcr2"]
+[ext_resource type="Script" path="res://scenes/action_menu/move_cancel.gd" id="5_cancel"]
+[ext_resource type="Script" path="res://scenes/action_menu/turn_resources.gd" id="6_resources"]
+
+[node name="RadialActionMenu" type="Node2D" unique_id=1142914654]
+
+[node name="MoveCancel" type="Node2D" parent="."]
+visible = false
+script = ExtResource("5_cancel")
+
+[node name="WheelBackGround" type="Node2D" parent="." unique_id=435167720]
+script = ExtResource("1_uq5ag")
+
+[node name="TurnResources" type="Node2D" parent="."]
+script = ExtResource("6_resources")
+
+[node name="Action" type="TextureButton" parent="." unique_id=219116542]
+offset_left = -81.0
+offset_top = -81.0
+offset_right = -33.0
+offset_bottom = -33.0
+scale = Vector2(1.42, 1.42)
+pivot_offset = Vector2(24, 24)
+focus_mode = 0
+texture_normal = ExtResource("1_cguou")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="Move" type="TextureButton" parent="." unique_id=2041971996]
+offset_left = -104.0
+offset_top = -24.0
+offset_right = -56.0
+offset_bottom = 24.0
+scale = Vector2(1.57, 1.57)
+pivot_offset = Vector2(24, 24)
+focus_mode = 0
+texture_normal = ExtResource("2_uq5ag")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="EndTurn" type="TextureButton" parent="." unique_id=514993082]
+offset_left = -81.0
+offset_top = 33.0
+offset_right = -33.0
+offset_bottom = 81.0
+focus_mode = 0
+texture_normal = ExtResource("3_1bcr2")
+ignore_texture_size = true
+stretch_mode = 5

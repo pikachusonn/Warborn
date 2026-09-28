@@ -4,5 +4,6 @@
 
 [resource]
 script = ExtResource("1_tcx81")
+description = "Deploy a bouncing pad on an empty tile for 1 action point. Repositioning the deployed pad costs no action points and starts a 3-turn cooldown."
 cooldown = 2
 metadata/_custom_type_script = "uid://b1bbbeask7wb5"

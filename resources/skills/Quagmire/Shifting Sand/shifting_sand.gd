@@ -10,6 +10,12 @@ var selected_pillar := Vector2i(-1, -1)
 var hovered_pillar := Vector2i(-1, -1)
 var direction_arrow: Polygon2D
 
+func has_usable_target(unit: Unit) -> bool:
+	for skill in unit.skills:
+		if skill is Mud_Pillar:
+			return not skill.active_pillars.is_empty()
+	return false
+
 func begin(grid_field: GridField, unit: Unit) -> void:
 	grid_field.targeting_skill = true
 	owner = unit
