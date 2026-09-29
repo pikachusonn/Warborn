@@ -1,0 +1,167 @@
+extends RefCounted
+## Only the host runs rules. These snapshots give the client state to display,
+## including legal target tiles; they never deserialize Objects or execute skills.
+const SKILL_FIELDS := ["cooldown_remaining", "damage", "execute_damage_bonus", "deployed", "stage", "free_cast"]
+var grid: GridField
+var markers: Node2D
+var health_views: Dictionary = {}
+
+func _init(board: GridField) -> void:
+	grid = board
+
+func capture() -> Dictionary:
+	var units: Array = grid.player_units + grid.enemy_units
+	var state: Dictionary = {}
+	var active_id := grid.active_unit.network_id if grid.active_unit else -1
+	var skill_index := grid.active_unit.skills.find(grid.active_skill) if grid.active_unit else -1
+	var availability: Array[bool] = []
+	for index in 4:
+		availability.append(grid.can_use_skill(index))
+	state["combat"] = {
+		"active": active_id, "turn": grid.turn_index, "energy": grid.energy,
+		"free": grid.free_movement, "action": grid.current_action,
+		"skill": skill_index, "targeting": grid.targeting_skill,
+		"resolving": grid.resolving_turn_start, "presenting": grid.presenting_skill,
+		"menu": grid.radial_skills_open, "availability": availability,
+		"targets": _positions(grid.target_tiles), "impact": _positions(grid.impact_preview_tiles),
+	}
+	for unit: Unit in units:
+		var skills: Array = []
+		for skill in unit.skills:
+			var fields: Dictionary = {}
+			for key in SKILL_FIELDS:
+				var value = skill.get(key)
+				if value != null:
+					fields[key] = value
+			skills.append(fields)
+		state["unit_%d" % unit.network_id] = {
+			"tile": unit.grid_position, "position": unit.position,
+			"health": unit.current_health, "shield": unit.temp_health,
+			"statuses": unit.status_effects.duplicate(), "skills": skills,
+			"selected": unit.is_selected, "modulate": unit.modulate,
+			"sprite_modulate": unit.sprite.modulate, "sprite_visible": unit.sprite.visible,
+			"z": unit.z_index,
+			"hp_visible": unit.hp_bar.visible,
+			"preview_damage": unit.preview_damage, "preview_healing": unit.preview_healing,
+		}
+	var tile_states: Array = []
+	for x in GridField.WIDTH:
+		for y in GridField.HEIGHT:
+			var tile: TileScene = grid.tiles[Vector2i(x, y)]
+			tile_states.append([tile.modulate, tile.quagmire_overlay.visible,
+				tile.quagmire_overlay.texture.resource_path if tile.quagmire_overlay.texture else "",
+				tile.quagmire_overlay.modulate, tile.aoe_overlay.visible, tile.aoe_base_color])
+	state["tiles"] = tile_states
+	state["markers"] = _capture_markers()
+	# Canonical world facts are useful to inspect without rerunning client rules.
+	var world: Dictionary = {"movement_blockers": grid.movement_blockers.keys(), "projectile_blockers": grid.projectile_blockers.keys(), "pads": grid.bouncing_pads.keys(), "zones": []}
+	for effect in grid.active_aoe_effects:
+		for zone in effect.active_zones:
+			world.zones.append({"owner": effect.owner.network_id, "skill": effect.owner.skills.find(effect), "tiles": zone.tiles.duplicate(), "turns": zone.turns})
+	state["world"] = world
+	return state
+
+func _positions(tiles: Array) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for tile in tiles:
+		result.append(tile.grid_position)
+	return result
+
+func apply(state: Dictionary) -> void:
+	var combat: Dictionary = state.combat
+	var units: Array = grid.player_units + grid.enemy_units
+	grid.active_unit = units[combat.active] if combat.active >= 0 else null
+	grid.radial_menu_owner = grid.active_unit
+	grid.turn_index = combat.turn
+	grid.energy = combat.energy
+	grid.free_movement = combat.free
+	grid.current_action = combat.action
+	grid.active_skill = grid.active_unit.skills[combat.skill] if grid.active_unit and combat.skill >= 0 else null
+	grid.targeting_skill = combat.targeting
+	grid.resolving_turn_start = combat.resolving
+	grid.presenting_skill = combat.presenting
+	grid.radial_skills_open = combat.menu
+	grid.remote_skill_availability.assign(combat.availability)
+	grid.target_tiles.clear()
+	for pos in combat.targets:
+		grid.target_tiles.append(grid.tiles[pos])
+	grid.impact_preview_tiles.clear()
+	for pos in combat.impact:
+		grid.impact_preview_tiles.append(grid.tiles[pos])
+	for unit: Unit in units:
+		var data: Dictionary = state["unit_%d" % unit.network_id]
+		unit.grid_position = data.tile
+		unit.position = data.position
+		unit.current_health = data.health
+		unit.temp_health = data.shield
+		unit.status_effects = data.statuses.duplicate()
+		for index in unit.skills.size():
+			for key in data.skills[index]:
+				if key in SKILL_FIELDS:
+					unit.skills[index].set(key, data.skills[index][key])
+		unit.modulate = data.modulate
+		unit.sprite.modulate = data.sprite_modulate
+		unit.sprite.visible = data.sprite_visible
+		unit.z_index = data.z
+		unit.set_selected(data.selected)
+		unit.update_status_icons()
+		health_views[unit.network_id] = data
+	update_health_display()
+	var index := 0
+	for x in GridField.WIDTH:
+		for y in GridField.HEIGHT:
+			var tile: TileScene = grid.tiles[Vector2i(x, y)]
+			var data: Array = state.tiles[index]
+			index += 1
+			tile.modulate = data[0]
+			if data[1]:
+				if tile.quagmire_overlay.texture == null or tile.quagmire_overlay.texture.resource_path != data[2]:
+					tile.show_quagmire(Unit.Side.PLAYER, load(data[2]))
+			tile.quagmire_overlay.visible = data[1]
+			tile.quagmire_overlay.modulate = data[3]
+			tile.aoe_overlay.visible = data[4]
+			tile.aoe_base_color = data[5]
+			tile.aoe_overlay.color = data[5]
+			tile.queue_redraw()
+	grid.update_radial_menu()
+	if grid.active_unit:
+		grid.unit_panel.show_unit(grid.active_unit)
+		grid.unit_panel.update_energy(grid.energy)
+		grid.unit_panel.clear_skill_active()
+		if combat.skill >= 0:
+			grid.unit_panel.set_skill_active([grid.unit_panel.skill1_button, grid.unit_panel.skill2_button, grid.unit_panel.skill3_button, grid.unit_panel.skill4_button][combat.skill])
+		elif combat.action == GridField.Action.MOVE:
+			grid.unit_panel.set_skill_active(grid.unit_panel.move_button)
+	else:
+		grid.unit_panel.hide()
+	if not is_instance_valid(markers):
+		markers = preload("res://network/replica_markers.gd").new()
+		grid.add_child(markers)
+	markers.set_markers(state.markers)
+
+func update_health_display() -> void:
+	# Mirror shared combat feedback, while allowing private local unit inspection.
+	var local_mouse := grid.to_local(grid.get_global_mouse_position())
+	var hovered_tile := Vector2i((local_mouse / GridField.TILE_SIZE).floor())
+	for unit: Unit in grid.player_units + grid.enemy_units:
+		if not health_views.has(unit.network_id):
+			continue
+		var data: Dictionary = health_views[unit.network_id]
+		unit.set_hovered(data.hp_visible or unit.grid_position == hovered_tile)
+		unit.show_health_preview(data.preview_damage, data.preview_healing)
+
+func _capture_markers() -> Array:
+	var result: Array = []
+	for node in grid.get_children():
+		if node.is_queued_for_deletion():
+			continue
+		if node is Polygon2D:
+			var transform: Transform2D = grid.global_transform.affine_inverse() * node.global_transform
+			result.append({"kind": "polygon", "points": node.polygon, "color": node.color, "transform": transform, "upright": node in grid.movement_blockers.values(), "z": node.z_index})
+		elif node is Line2D:
+			var points := PackedVector2Array()
+			for point in node.points:
+				points.append(grid.to_local(node.to_global(point)))
+			result.append({"kind": "line", "points": points, "color": node.default_color, "width": node.width / grid.scale.x if node.top_level else node.width, "z": node.z_index})
+	result.sort_custom(func(a: Dictionary, b: Dictionary): return a.z < b.z)
+	return result

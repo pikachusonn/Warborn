@@ -68,6 +68,8 @@ func _ready() -> void:
 	add_child(skill_tooltip)
 
 func _input(event: InputEvent) -> void:
+	if not get_node("/root/Netplay").can_input():
+		return
 	if not is_visible_in_tree():
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -88,8 +90,14 @@ func _input(event: InputEvent) -> void:
 				action_pressed.emit()
 	
 func _process(_delta: float) -> void:
-	var next_segment := get_segment_at(get_local_mouse_position())
+	update_hover_from_point(get_local_mouse_position())
+
+func update_hover_from_point(point: Vector2) -> void:
+	var next_segment := get_segment_at(point)
 	update_skill_tooltip(next_segment)
+	# Inspection remains local, but an observer must not get actionable hover tint.
+	if not get_node("/root/Netplay").can_input():
+		next_segment = -1
 
 	if next_segment != hovered_segment:
 		hovered_segment = next_segment

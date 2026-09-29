@@ -18,6 +18,7 @@ const EFFECTS = {
 @export var status_tooltip_scene: PackedScene
 
 var side: Side
+var network_id := -1
 var current_health: int
 var temp_health: int
 var grid_position: Vector2i
@@ -25,6 +26,8 @@ var is_selected := false
 var status_effects: Dictionary = {}
 var status_tooltip: StatusTooltip
 var health_preview_active := false
+var preview_damage := 0
+var preview_healing := 0
 var hovered_for_ui := false
 
 const DEFEATED_OPACITY := 0.5
@@ -177,6 +180,8 @@ func show_health_preview(damage_amount: int, healing_amount: int) -> void:
 	clear_health_preview()
 	if is_defeated() or (damage_amount <= 0 and healing_amount <= 0):
 		return
+	preview_damage = damage_amount
+	preview_healing = healing_amount
 	update_hp_bar()
 	health_preview_active = true
 	hp_bar.show()
@@ -223,6 +228,8 @@ func show_health_preview(damage_amount: int, healing_amount: int) -> void:
 		preview_amount_label.show()
 
 func clear_health_preview() -> void:
+	preview_damage = 0
+	preview_healing = 0
 	var restore_hp_bar := health_preview_active
 	health_preview_active = false
 	shield_loss_preview.hide()

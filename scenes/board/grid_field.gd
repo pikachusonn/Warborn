@@ -38,6 +38,8 @@ var resolving_turn_start := false
 var presenting_skill := false
 var radial_skills_open := false
 var radial_menu_owner: Unit
+var network_handler_busy := false
+var remote_skill_availability: Array[bool] = []
 # ================================
 # SKILLS / TARGETING
 # ================================
@@ -67,6 +69,7 @@ enum Action {
 # UI
 # ================================
 var hovered_unit: Unit
+@onready var netplay: Node = get_node("/root/Netplay")
 @onready var unit_panel: UnitPanel = $CanvasLayer/BottomHUD
 @onready var skill_cutscene: Control = $CanvasLayer/SkillCutscene
 @onready var radial_menu: Node2D = $RadialActionMenu
@@ -127,15 +130,20 @@ func _ready() -> void:
 	unit_panel.skill2_pressed.connect(handle_skill_pressed.bind(1, Action.SKILL2))
 	unit_panel.skill3_pressed.connect(handle_skill_pressed.bind(2, Action.SKILL3))
 	unit_panel.skill4_pressed.connect(handle_skill_pressed.bind(3, Action.SKILL4))
-	unit_panel.end_turn_pressed.connect(end_turn)
+	unit_panel.end_turn_pressed.connect(handle_radial_end_turn)
 	radial_menu.get_node("WheelBackGround").end_turn_pressed.connect(handle_radial_end_turn)
 	radial_menu.get_node("WheelBackGround").move_pressed.connect(handle_radial_move)
 	radial_menu.get_node("WheelBackGround").action_pressed.connect(open_radial_skills)
 	radial_menu.get_node("WheelBackGround").skill_pressed.connect(select_radial_skill)
 	radial_menu.get_node("MoveCancel").cancel_pressed.connect(cancel_radial_movement)
-	start_combat()
+	if netplay.is_networked():
+		netplay.attach_board(self)
+	else:
+		start_combat()
 
 func open_radial_skills() -> void:
+	if netplay.intercept("skills"):
+		return
 	if resolving_turn_start or not is_instance_valid(active_unit):
 		return
 	if active_skill != null:
@@ -144,6 +152,8 @@ func open_radial_skills() -> void:
 	update_radial_menu()
 
 func select_radial_skill(index: int) -> void:
+	if netplay.intercept("skill", index):
+		return
 	if resolving_turn_start or not is_instance_valid(active_unit):
 		return
 	if not can_use_skill(index):
@@ -154,6 +164,8 @@ func select_radial_skill(index: int) -> void:
 	update_radial_menu()
 
 func can_use_skill(index: int) -> bool:
+	if netplay.is_client():
+		return index >= 0 and index < remote_skill_availability.size() and remote_skill_availability[index]
 	if not is_instance_valid(active_unit) or index < 0 or index >= active_unit.skills.size():
 		return false
 	var skill: Skill = active_unit.skills[index]
@@ -170,6 +182,8 @@ func has_usable_skill() -> bool:
 	return false
 
 func cancel_radial_movement() -> void:
+	if netplay.intercept("cancel"):
+		return
 	if resolving_turn_start:
 		return
 	if active_skill != null and not targeting_skill:
@@ -187,6 +201,8 @@ func cancel_radial_movement() -> void:
 	update_radial_menu()
 
 func handle_radial_move() -> void:
+	if netplay.intercept("move"):
+		return
 	if resolving_turn_start or not is_instance_valid(active_unit):
 		return
 	if active_unit.is_defeated() or (energy <= 0 and not free_movement):
@@ -201,6 +217,8 @@ func handle_radial_move() -> void:
 	handle_move_pressed()
 
 func handle_radial_end_turn() -> void:
+	if netplay.intercept("end"):
+		return
 	if resolving_turn_start or not is_instance_valid(active_unit):
 		return
 	# Don't interrupt a skill that is already playing its attack presentation.
@@ -219,10 +237,36 @@ func update_board_layout() -> void:
 	scale = Vector2.ONE * board_size / (HEIGHT * TILE_SIZE)
 	# Leave 11% above the board and 9% below.
 	position = Vector2((viewport_size.x - board_size) / 2.0, viewport_size.y * 0.11)
+	# Both peers retain the same logical coordinates. Only the guest's view rotates.
+	rotation = PI if netplay.is_client() else 0.0
+	if netplay.is_client():
+		position += Vector2.ONE * board_size
+	for child in get_children():
+		if child is Unit or child == radial_menu:
+			child.rotation = -rotation
 
 func _process(_delta: float) -> void:
 	update_radial_menu()
-	var mouse_pos = get_global_mouse_position()
+	if netplay.is_networked():
+		var enabled: bool = netplay.can_input()
+		unit_panel.move_button.disabled = not enabled or (energy <= 0 and not free_movement)
+		unit_panel.end_turn_button.disabled = not enabled
+		var buttons := [unit_panel.skill1_button, unit_panel.skill2_button, unit_panel.skill3_button, unit_panel.skill4_button]
+		for index in buttons.size():
+			buttons[index].disabled = not enabled or not can_use_skill(index)
+	if netplay.is_client():
+		if netplay.state_codec != null:
+			netplay.state_codec.update_health_display()
+		return
+	refresh_target_preview()
+
+func get_target_mouse_position() -> Vector2:
+	if netplay.is_networked() and (netplay.dispatching or netplay.executing_command or not netplay.owns_turn()):
+		return to_global(netplay.pointer)
+	return get_global_mouse_position()
+
+func refresh_target_preview() -> void:
+	var mouse_pos := get_target_mouse_position()
 	var local_mouse = to_local(mouse_pos)
 	var grid_pos = Vector2i(floori(local_mouse.x / TILE_SIZE), floori(local_mouse.y / TILE_SIZE))
 	if not tiles.has(grid_pos):
@@ -235,17 +279,16 @@ func _process(_delta: float) -> void:
 			active_skill.update_preview(self, active_unit)
 		update_health_previews()
 		return
+	var tile = tiles[grid_pos]
+	# Update the hovered tile before skills such as Crater Maker read it.
+	if tile != hovered_tile:
+		clear_hover()
+		hovered_tile = tile
+		hovered_tile.set_hovered(true)
+		update_hovered_unit(tile)
 	if active_skill and active_unit and targeting_skill:
 		active_skill.update_preview(self, active_unit)
 	update_health_previews()
-	var tile = tiles[grid_pos]
-	if tile == hovered_tile:
-		update_aoe_hover(grid_pos)
-		return
-	clear_hover()
-	hovered_tile = tile
-	hovered_tile.set_hovered(true)
-	update_hovered_unit(tile)
 	update_aoe_hover(grid_pos)
 
 func clear_hover() -> void:
@@ -260,6 +303,7 @@ func clear_hover() -> void:
 		hovered_tile = null
 
 func update_radial_menu() -> void:
+	radial_menu.modulate = Color(0.55, 0.55, 0.55, 0.5) if netplay.is_networked() and not netplay.owns_turn() else Color.WHITE
 	if radial_menu_owner != active_unit:
 		radial_skills_open = false
 		radial_menu_owner = active_unit
@@ -377,12 +421,14 @@ func update_hovered_unit(tile: TileScene):
 	
 func spawn_character(data: UnitData, pos: Vector2i, side: Unit.Side):
 	var unit_instance: Unit = unit_scene.instantiate()
+	unit_instance.network_id = player_units.size() + enemy_units.size()
 	add_child(unit_instance)
 	unit_instance.setup(
 		pos,
 		data,
 		side
 	)
+	unit_instance.rotation = -rotation
 	unit_instance.play_spawn_effect()
 	unit_instance.click_area.unit_clicked.connect(handle_unit_clicked)
 	if side == Unit.Side.PLAYER:
@@ -398,7 +444,7 @@ func spawn_team(team):
 		spawn_character(data, pos, side)
 		
 func get_mouse_grid_position() -> Vector2i:
-	var mouse_position := to_local(get_global_mouse_position())
+	var mouse_position := to_local(get_target_mouse_position())
 	return Vector2i(floori(mouse_position.x / 64.0), floori(mouse_position.y / 64.0))
 	
 func clear_impact_preview() -> void:
@@ -444,6 +490,8 @@ func move_unit(unit: Unit, target_pos: Vector2i):
 		end_turn()
 		
 func end_turn():
+	if netplay.is_client():
+		return
 	if resolving_turn_start:
 		return
 	clear_skill_state()
@@ -466,6 +514,10 @@ func advance_to_next_living_unit() -> bool:
 	return false
 	
 func handle_unit_clicked(unit: Unit):
+	# Unit selection must never replace the initiative owner in network play.
+	# Target clicks are handled by the tile below the unit, as in local targeting.
+	if netplay.is_networked():
+		return
 	if resolving_turn_start:
 		return
 	if(targeting_skill):
@@ -480,6 +532,10 @@ func handle_unit_clicked(unit: Unit):
 	active_unit.set_selected(true)
 	
 func handle_tile_clicked(pos: Vector2i):
+	if netplay.intercept("tile", -1, pos):
+		return
+	if not tiles.has(pos):
+		return
 	if resolving_turn_start:
 		return
 	if(active_unit == null):
@@ -496,7 +552,7 @@ func handle_tile_clicked(pos: Vector2i):
 			unit_panel.clear_skill_active()
 		_:
 			if active_skill:
-				active_skill.on_tile_clicked(self, active_unit, pos)
+				await active_skill.on_tile_clicked(self, active_unit, pos)
 	
 func update_unit_visuals():
 	for unit in turn_order:
@@ -591,6 +647,8 @@ func show_affected_tiles(target_positions: Array[Vector2i]):
 		tiles[target].set_attack_warning()
 	
 func handle_move_pressed(is_skill = false): 
+	if not is_skill and netplay.intercept("move"):
+		return
 	if resolving_turn_start:
 		return
 	if active_unit == null:
@@ -602,6 +660,8 @@ func handle_move_pressed(is_skill = false):
 	calculate_move_range(active_unit)
 
 func handle_skill_pressed(skill_number: int, action: Action):
+	if netplay.intercept("skill", skill_number):
+		return
 	if resolving_turn_start:
 		return
 	if active_unit == null:
@@ -622,7 +682,7 @@ func handle_skill_pressed(skill_number: int, action: Action):
 	active_skill.begin(self, active_unit)
 			
 func get_direction_to_mouse(position: Vector2, diagonal = false) -> Vector2i:
-	var mouse_pos := get_global_mouse_position()
+	var mouse_pos := get_target_mouse_position()
 	var delta := mouse_pos - position
 	# Normal 4-direction aiming
 	if not diagonal:
@@ -651,7 +711,7 @@ func get_direction_to_mouse(position: Vector2, diagonal = false) -> Vector2i:
 		return Vector2i(1, -1)
 
 func get_skill_distance(unit: Unit) -> int:
-	var mouse_pos := get_global_mouse_position()
+	var mouse_pos := get_target_mouse_position()
 	var unit_pos := unit.global_position
 	var delta := to_local(mouse_pos) - to_local(unit_pos)
 	var tile_distance = max(abs(delta.x), abs(delta.y)) / TILE_SIZE
@@ -713,6 +773,10 @@ func initialize_turn_order():
 	turn_index = 0
 
 func start_unit_turn(unit: Unit):
+	if netplay.is_client():
+		return
+	if netplay.is_networked():
+		netplay.turn_epoch += 1
 	if unit.is_defeated():
 		if advance_to_next_living_unit():
 			start_unit_turn(turn_order[turn_index])
@@ -730,7 +794,9 @@ func start_unit_turn(unit: Unit):
 	if unit.get_status_stacks(Unit.EFFECTS.STUNNED) > 0:
 		unit.remove_status(Unit.EFFECTS.STUNNED)
 		unit.shake()
+		resolving_turn_start = true
 		await get_tree().create_timer(0.5).timeout
+		resolving_turn_start = false
 		end_turn()
 		return
 		
@@ -845,3 +911,26 @@ func are_mobility_skills_blocked(unit: Unit) -> bool:
 		if effect.has_method("blocks_mobility_skills") && effect.blocks_mobility_skills(unit):
 			return true
 	return false
+
+func network_command_allowed(action: String, argument: int) -> bool:
+	if not is_instance_valid(active_unit) or active_unit.is_defeated() or resolving_turn_start or presenting_skill or network_handler_busy:
+		return false
+	if active_skill != null and not targeting_skill:
+		return false
+	match action:
+		"skills", "cancel", "end": return true
+		"move": return free_movement or energy > 0
+		"skill": return can_use_skill(argument)
+		"tile": return current_action == Action.MOVE or active_skill != null
+	return false
+
+func execute_network_command(action: String, argument: int, tile: Vector2i) -> void:
+	network_handler_busy = true
+	match action:
+		"skills": open_radial_skills()
+		"cancel": cancel_radial_movement()
+		"end": handle_radial_end_turn()
+		"move": handle_radial_move()
+		"skill": select_radial_skill(argument)
+		"tile": await handle_tile_clicked(tile)
+	network_handler_busy = false

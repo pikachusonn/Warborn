@@ -16,6 +16,7 @@ func begin(grid_field: GridField, unit: Unit) -> void:
 		grid_field.end_turn()
 		return
 	stage = Stage.MOVE
+	grid_field.targeting_skill = true
 	grid_field.clear_move_range()
 	grid_field.calculate_move_range(unit, true)
 	
@@ -25,7 +26,7 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 		Stage.MOVE:
 			handle_move_stage(grid_field, unit, pos)
 		Stage.SHOT:
-			handle_shot_stage(grid_field, unit, pos)
+			await handle_shot_stage(grid_field, unit, pos)
 			
 func handle_move_stage(grid_field: GridField, unit: Unit, pos: Vector2i):
 	if not grid_field.tiles.has(pos):
@@ -35,7 +36,7 @@ func handle_move_stage(grid_field: GridField, unit: Unit, pos: Vector2i):
 		return
 	# Move
 	unit.grid_position = pos
-	unit.global_position = (grid_field.tiles[pos].global_position + Vector2(32, 32))
+	unit.global_position = grid_field.get_tile_center(pos)
 	#Clear preview
 	grid_field.clear_move_range()
 	stage = Stage.SHOT
@@ -46,7 +47,7 @@ func update_preview(grid_field: GridField, unit: Unit) -> void:
 		piercing_shot.update_preview(grid_field, unit)
 
 func handle_shot_stage(grid_field: GridField, unit: Unit, pos: Vector2i):
-	piercing_shot.on_tile_clicked(grid_field, unit, pos)
+	await piercing_shot.on_tile_clicked(grid_field, unit, pos)
 	
 func cancel(grid_field: GridField, unit: Unit) -> void:
 	grid_field.clear_move_range()

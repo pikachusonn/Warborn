@@ -11,9 +11,13 @@ config_version=5
 [application]
 
 config/name="Warborn"
-run/main_scene="uid://8h584u0xul30"
+run/main_scene="res://network/lobby.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
+
+[autoload]
+
+Netplay="*res://network/netplay.gd"
 
 [display]
 
