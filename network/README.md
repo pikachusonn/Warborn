@@ -21,7 +21,7 @@ also accepts a Tailscale address; Tailscale configuration is outside this stage.
 Host-only simulation; team ownership; turn, move, select, cast, cancel, and end-turn
 commands; authoritative state updates and stale-command rejection.
 
-Both players need this stage 2 build (protocol version 3). The host controls the
+Both players need this build (protocol version 4). The host controls the
 original lower team; the joining player controls the other team. Only the active
 unit's owner can operate its menu. Clicking another unit cannot change initiative.
 
@@ -37,8 +37,13 @@ Stage 2 includes legal target tiles and basic pillars/pads/shields so skills can
 used. Guest health bars now follow combat visibility and damage/healing previews,
 with local unit inspection available. The observer's radial menu is dimmed and
 does not highlight under their pointer; skill tooltips remain local and readable.
-Cloud animations, dust, cutscenes, and the remaining shared hover presentation
-remain stage 3.
+Odin clouds, their covered tiles, and countdowns replicate to the guest. Character,
+zone, cloud, and tooltip hover are private to each player's own pointer.
+
+Replication is change-driven rather than continuous: the host sends authoritative
+state after commands and turn-start resolution, while the active player sends aim
+updates only when the targeting tile changes. Private hover never enters snapshots.
+Dust, cutscenes, and skill animations are intentionally not synchronized.
 
 ## Stage 3 — shared presentation
 

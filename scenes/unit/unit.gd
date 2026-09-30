@@ -17,11 +17,20 @@ const EFFECTS = {
 @export var cooldown: int
 @export var status_tooltip_scene: PackedScene
 
+signal position_changed(unit: Unit)
+signal defeated(unit: Unit)
+
 var side: Side
 var network_id := -1
 var current_health: int
 var temp_health: int
-var grid_position: Vector2i
+var has_completed_capture: bool = false
+var grid_position: Vector2i:
+	set(value):
+		var changed := grid_position != value
+		grid_position = value
+		if changed:
+			position_changed.emit(self)
 var is_selected := false
 var status_effects: Dictionary = {}
 var status_tooltip: StatusTooltip
@@ -67,6 +76,7 @@ func _process(delta: float) -> void:
 	pass
 
 func setup(pos: Vector2i, unit_data: UnitData, unit_side):
+	has_completed_capture = false
 	z_index = LIVING_Z_INDEX
 	grid_position = pos
 	data = unit_data
@@ -254,6 +264,7 @@ func take_damage(amount: int) -> void:
 	update_hp_bar()
 	if is_defeated():
 		set_defeated_visual()
+		defeated.emit(self)
 
 func heal(amount: int):
 	if is_defeated() or amount <= 0:

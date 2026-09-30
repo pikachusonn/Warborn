@@ -24,6 +24,10 @@ func setup(center: Vector2i, positions: Array[Vector2i]) -> void:
 	countdown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	countdown.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	countdown.size = Vector2(96, 80)
+	countdown.pivot_offset = countdown.size / 2.0
+	var grid := get_parent() as GridField
+	if grid != null:
+		countdown.rotation = -grid.rotation
 	countdown.visible = false
 	countdown.add_theme_font_size_override("font_size", 48)
 	countdown.add_theme_color_override("font_color", Color(0.95, 0.97, 1.0))
@@ -56,9 +60,10 @@ func set_hovered(value: bool) -> void:
 func _process(delta: float) -> void:
 	elapsed += delta
 	# Height, gentle bobbing and sideways drift separate the cloud from the floor.
-	position = Vector2(sin(elapsed * 0.65) * 3.0, -FLOAT_HEIGHT + sin(elapsed * 1.1) * 4.0)
-	material.set_shader_parameter("cloud_offset", position)
+	var screen_offset := Vector2(sin(elapsed * 0.65) * 3.0, -FLOAT_HEIGHT + sin(elapsed * 1.1) * 4.0)
 	var grid := get_parent() as GridField
+	position = screen_offset.rotated(-grid.rotation) if grid != null else screen_offset
+	material.set_shader_parameter("cloud_offset", position)
 	if grid != null:
 		update_cleared_tiles(grid)
 
@@ -86,6 +91,15 @@ func update_cleared_tiles(grid: GridField) -> void:
 func _draw() -> void:
 	var cell := Vector2(GridField.TILE_SIZE, GridField.TILE_SIZE)
 	var source_cell := Vector2(1086.0, 1062.0) / 3.0
+	var grid := get_parent() as GridField
+	var counter_rotation := -grid.rotation if grid != null else 0.0
+	var flipped := not is_zero_approx(counter_rotation)
 	for tile in tiles:
-		var source := Rect2(Vector2(84, 92) + Vector2(tile - origin) * source_cell, source_cell)
-		draw_texture_rect_region(CLOUD, Rect2(Vector2(tile) * cell, cell), source)
+		var source_index := tile - origin
+		if flipped:
+			source_index = Vector2i(2, 2) - source_index
+		var source := Rect2(Vector2(84, 92) + Vector2(source_index) * source_cell, source_cell)
+		var center := (Vector2(tile) + Vector2(0.5, 0.5)) * cell
+		draw_set_transform(center, counter_rotation)
+		draw_texture_rect_region(CLOUD, Rect2(-cell / 2.0, cell), source)
+	draw_set_transform(Vector2.ZERO, 0.0)

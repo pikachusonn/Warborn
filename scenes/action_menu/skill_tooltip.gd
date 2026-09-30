@@ -120,5 +120,23 @@ func show_skill(skill: Skill, display_name: String, anchor: Vector2) -> void:
 		clampf(desired.y, 10, maxf(10, viewport_size.y - panel.size.y - 10))
 	)
 
+func show_capture(anchor: Vector2, can_capture: bool) -> void:
+	title.text = "Capture Zone"
+	bolt_material.set_shader_parameter("inactive", false)
+	damage_label.text = "+1 Capture Point"
+	cooldown_label.text = "3 Turns"
+	var desc := "Spend 1 AP to begin capturing the zone. Hold position inside the zone until the start of your 3rd turn to score 1 Capture Point (2 points to win).\n\nMoving or being displaced outside cancels the capture. Each unit can complete a capture once per match."
+	if not can_capture:
+		desc += "\n\n(Requirements not met)"
+	description_label.text = desc
+	panel.reset_size()
+	panel.show()
+	var viewport_size := get_viewport().get_visible_rect().size
+	var desired := anchor - Vector2(panel.size.x + 16, panel.size.y * 0.5)
+	panel.position = Vector2(
+		clampf(desired.x, 10, maxf(10, viewport_size.x - panel.size.x - 10)),
+		clampf(desired.y, 10, maxf(10, viewport_size.y - panel.size.y - 10))
+	)
+
 func hide_tooltip() -> void:
 	panel.hide()

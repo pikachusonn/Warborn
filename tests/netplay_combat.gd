@@ -136,6 +136,14 @@ func run_client() -> void:
 		await process_frame
 	assert(grid.active_unit == grid.enemy_units[2])
 	assert(not session.last_snapshot.world.zones.is_empty(), "Persistent zone state must replicate")
+	assert(not session.state_codec.replica_clouds.is_empty(), "Odin cloud must exist on the guest")
+	var cloud = session.state_codec.replica_clouds.values()[0]
+	var cloud_tile: Vector2i = session.last_snapshot.world.zones[0].tiles[0]
+	assert(not cloud.is_hovered)
+	grid.update_aoe_hover(cloud_tile)
+	assert(cloud.is_hovered, "Guest cloud hover must be calculated locally")
+	grid.update_aoe_hover(Vector2i(9, 9))
+	assert(not cloud.is_hovered)
 	assert(grid.active_unit.current_health == grid.active_unit.data.health)
 	await command("end")
 	while not session.can_input():

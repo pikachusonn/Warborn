@@ -6,6 +6,7 @@ const TARGET_RADIUS: int = 2
 @export_range(0.0, 1.0) var shield_fraction: float = 0.5
 var owner: Unit
 var active_zones: Array[Dictionary] = []
+var next_zone_id := 1
 
 func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 	if grid_field.energy <= 0 or pos not in get_target_tiles(grid_field, unit, Vector2i.ZERO):
@@ -27,7 +28,8 @@ func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i
 	grid_field.add_child(cloud)
 	cloud.setup(center, claimed)
 	cloud.set_rounds_left(zone_duration)
-	active_zones.append({"tiles": claimed, "turns": zone_duration, "cloud": cloud})
+	active_zones.append({"id": next_zone_id, "center": center, "tiles": claimed, "turns": zone_duration, "cloud": cloud})
+	next_zone_id += 1
 	for pos in claimed:
 		grid_field.tiles[pos].show_aoe(TileScene.get_team_aoe_color(unit.side), 0.35)
 

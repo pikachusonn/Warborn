@@ -1,8 +1,7 @@
 extends Node
 ## Host-authoritative combat. Clients send intent and render primitive snapshots.
 const PORT := 27841
-const PROTOCOL := 3
-const UPDATE_INTERVAL := 0.05
+const PROTOCOL := 4
 const CONNECTION_TIMEOUT := 10.0
 enum Mode { LOCAL, HOST, CLIENT }
 var mode := Mode.LOCAL
@@ -24,7 +23,7 @@ var command_pending := false
 var executing_command := false
 var dispatching := false
 var pointer := Vector2(-100, -100)
-var update_clock := 0.0
+var last_target_tile := Vector2i(-1000, -1000)
 var last_snapshot: Dictionary = {}
 var state_codec: RefCounted
 var session_generation := 0
@@ -91,6 +90,7 @@ func close_session() -> void:
 	executing_command = false
 	dispatching = false
 	pointer = Vector2(-100, -100)
+	last_target_tile = Vector2i(-1000, -1000)
 	last_snapshot.clear()
 	state_codec = null
 	running = false
@@ -130,13 +130,7 @@ func _process(delta: float) -> void:
 			fail("Connection timed out. Check the host's address, port, and firewall.")
 	if not running or not board_started or not is_instance_valid(grid):
 		return
-	update_clock += delta
-	if update_clock >= UPDATE_INTERVAL:
-		update_clock = 0.0
-		if mode == Mode.HOST:
-			send_snapshot()
-		elif owns_turn() and not command_pending:
-			_pointer_update.rpc_id(1, revision, turn_epoch, grid.to_local(grid.get_global_mouse_position()))
+	_update_shared_targeting()
 	if is_instance_valid(status_label) and is_instance_valid(grid.active_unit):
 		status_label.text = "%s · %s · %s" % ["Host" if mode == Mode.HOST else "Guest", grid.active_unit.data.unit_name, "Resolving…" if executing_command or grid.resolving_turn_start else ("Your turn" if owns_turn() else "Opponent's turn")]
 
@@ -195,8 +189,32 @@ func _start_boards() -> void:
 	board_started = true
 	if mode == Mode.HOST:
 		grid.start_combat()
+		_send_initial_state()
 	else:
 		grid.initialize_turn_order()
+
+func _send_initial_state() -> void:
+	while running and is_instance_valid(grid) and (grid.resolving_turn_start or not is_instance_valid(grid.active_unit)):
+		await get_tree().process_frame
+	if running and is_instance_valid(grid):
+		send_snapshot()
+
+func _update_shared_targeting() -> void:
+	if not owns_turn() or command_pending or executing_command or not grid.is_sharing_target_preview():
+		last_target_tile = Vector2i(-1000, -1000)
+		return
+	var cursor := grid.to_local(grid.get_global_mouse_position())
+	var tile := Vector2i(floori(cursor.x / GridField.TILE_SIZE), floori(cursor.y / GridField.TILE_SIZE))
+	if tile == last_target_tile:
+		return
+	last_target_tile = tile
+	if mode == Mode.HOST:
+		# The host already calculated its local preview this frame. Publish only
+		# when the canonical hovered tile changes.
+		grid.refresh_target_preview()
+		send_snapshot()
+	else:
+		_pointer_update.rpc_id(1, revision, turn_epoch, cursor)
 
 func is_networked() -> bool:
 	return mode != Mode.LOCAL
@@ -290,8 +308,10 @@ func _pointer_update(expected_revision: int, epoch: int, cursor: Vector2) -> voi
 		return
 	if expected_revision != revision or epoch != turn_epoch or not cursor.is_finite() or cursor.length() > 100000:
 		return
-	if is_instance_valid(grid.active_unit) and grid.active_unit.side == Unit.Side.ENEMY:
+	if is_instance_valid(grid.active_unit) and grid.active_unit.side == Unit.Side.ENEMY and grid.is_sharing_target_preview():
 		pointer = cursor
+		grid.refresh_remote_target_preview(cursor)
+		send_snapshot()
 
 func send_snapshot() -> void:
 	if mode != Mode.HOST or not running or not remote_ready or state_codec == null:

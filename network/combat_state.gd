@@ -5,6 +5,8 @@ const SKILL_FIELDS := ["cooldown_remaining", "damage", "execute_damage_bonus", "
 var grid: GridField
 var markers: Node2D
 var health_views: Dictionary = {}
+var replica_zones: Array[Dictionary] = []
+var replica_clouds: Dictionary = {}
 
 func _init(board: GridField) -> void:
 	grid = board
@@ -41,8 +43,8 @@ func capture() -> Dictionary:
 			"selected": unit.is_selected, "modulate": unit.modulate,
 			"sprite_modulate": unit.sprite.modulate, "sprite_visible": unit.sprite.visible,
 			"z": unit.z_index,
-			"hp_visible": unit.hp_bar.visible,
 			"preview_damage": unit.preview_damage, "preview_healing": unit.preview_healing,
+			"has_captured": unit.has_completed_capture,
 		}
 	var tile_states: Array = []
 	for x in GridField.WIDTH:
@@ -53,11 +55,27 @@ func capture() -> Dictionary:
 				tile.quagmire_overlay.modulate, tile.aoe_overlay.visible, tile.aoe_base_color])
 	state["tiles"] = tile_states
 	state["markers"] = _capture_markers()
+	if grid.capture_zone != null:
+		state["capture"] = {
+			"state": grid.capture_zone.state,
+			"unit": grid.capture_zone.capturing_unit.network_id if is_instance_valid(grid.capture_zone.capturing_unit) else -1,
+			"team": grid.capture_zone.capturing_team,
+			"progress": grid.capture_zone.capture_turns_completed,
+			"points": grid.capture_zone.team_capture_points.duplicate(),
+			"ended": grid.match_ended,
+			"winner": grid.winning_team,
+			"win_reason": grid.win_reason
+		}
 	# Canonical world facts are useful to inspect without rerunning client rules.
 	var world: Dictionary = {"movement_blockers": grid.movement_blockers.keys(), "projectile_blockers": grid.projectile_blockers.keys(), "pads": grid.bouncing_pads.keys(), "zones": []}
 	for effect in grid.active_aoe_effects:
 		for zone in effect.active_zones:
-			world.zones.append({"owner": effect.owner.network_id, "skill": effect.owner.skills.find(effect), "tiles": zone.tiles.duplicate(), "turns": zone.turns})
+			var zone_state := {"owner": effect.owner.network_id, "skill": effect.owner.skills.find(effect), "tiles": zone.tiles.duplicate(), "turns": zone.turns}
+			if effect is OdinBlessing:
+				zone_state["kind"] = "odin_cloud"
+				zone_state["id"] = zone.get("id", 0)
+				zone_state["center"] = zone.get("center", zone.tiles[0])
+			world.zones.append(zone_state)
 	state["world"] = world
 	return state
 
@@ -105,8 +123,23 @@ func apply(state: Dictionary) -> void:
 		unit.z_index = data.z
 		unit.set_selected(data.selected)
 		unit.update_status_icons()
+		unit.has_completed_capture = data.get("has_captured", false)
 		health_views[unit.network_id] = data
 	update_health_display()
+	if state.has("capture") and grid.capture_zone != null:
+		var cap: Dictionary = state.capture
+		grid.capture_zone.state = cap.state
+		grid.capture_zone.capturing_unit = units[cap.unit] if (cap.unit >= 0 and cap.unit < units.size()) else null
+		grid.capture_zone.capturing_team = cap.team
+		grid.capture_zone.capture_turns_completed = cap.progress
+		grid.capture_zone.team_capture_points = {
+			Unit.Side.PLAYER: int(cap.points.get(Unit.Side.PLAYER, cap.points.get("0", 0))),
+			Unit.Side.ENEMY: int(cap.points.get(Unit.Side.ENEMY, cap.points.get("1", 0)))
+		}
+		grid.capture_zone.update_zone_visuals()
+		grid.capture_zone.capture_state_changed.emit()
+		if cap.ended and not grid.match_ended:
+			grid.end_match(cap.winner, cap.win_reason)
 	var index := 0
 	for x in GridField.WIDTH:
 		for y in GridField.HEIGHT:
@@ -138,6 +171,57 @@ func apply(state: Dictionary) -> void:
 		markers = preload("res://network/replica_markers.gd").new()
 		grid.add_child(markers)
 	markers.set_markers(state.markers)
+	_sync_replica_zones(state.world.zones)
+
+func _sync_replica_zones(zones: Array) -> void:
+	replica_zones.clear()
+	var live_clouds: Dictionary = {}
+	for zone_value in zones:
+		var zone: Dictionary = zone_value
+		replica_zones.append(zone.duplicate(true))
+		if zone.get("kind", "") != "odin_cloud":
+			continue
+		var key := "%d:%d:%d" % [zone.owner, zone.skill, zone.get("id", 0)]
+		var cloud = replica_clouds.get(key)
+		if not is_instance_valid(cloud):
+			cloud = preload("res://scenes/board/odin_cloud.gd").new()
+			grid.add_child(cloud)
+			cloud.setup(zone.center, zone.tiles)
+			replica_clouds[key] = cloud
+		else:
+			cloud.set_tiles(zone.tiles)
+		cloud.set_rounds_left(zone.turns)
+		live_clouds[key] = true
+	for key in replica_clouds.keys():
+		if not live_clouds.has(key):
+			var cloud = replica_clouds[key]
+			if is_instance_valid(cloud):
+				cloud.queue_free()
+			replica_clouds.erase(key)
+
+func get_replica_zone_tiles(position: Vector2i) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for zone in replica_zones:
+		if position in zone.tiles:
+			result.assign(zone.tiles)
+			break
+	return result
+
+func set_replica_zone_hover(positions: Array[Vector2i]) -> void:
+	for index in replica_zones.size():
+		var zone := replica_zones[index]
+		if zone.get("kind", "") != "odin_cloud":
+			continue
+		var key := "%d:%d:%d" % [zone.owner, zone.skill, zone.get("id", 0)]
+		var cloud = replica_clouds.get(key)
+		if not is_instance_valid(cloud):
+			continue
+		var hovered := false
+		for position in positions:
+			if position in zone.tiles:
+				hovered = true
+				break
+		cloud.set_hovered(hovered)
 
 func update_health_display() -> void:
 	# Mirror shared combat feedback, while allowing private local unit inspection.
@@ -147,7 +231,7 @@ func update_health_display() -> void:
 		if not health_views.has(unit.network_id):
 			continue
 		var data: Dictionary = health_views[unit.network_id]
-		unit.set_hovered(data.hp_visible or unit.grid_position == hovered_tile)
+		unit.set_hovered(unit.grid_position == hovered_tile)
 		unit.show_health_preview(data.preview_damage, data.preview_healing)
 
 func _capture_markers() -> Array:
