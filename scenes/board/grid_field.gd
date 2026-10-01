@@ -6,6 +6,20 @@ class_name GridField
 const WIDTH := 10
 const HEIGHT := 10
 const TILE_SIZE := 64
+
+static func is_mobile() -> bool:
+	return OS.has_feature("mobile") or OS.get_name() in ["Android", "iOS"] or DisplayServer.is_touchscreen_available()
+
+func show_mobile_skill_tooltip(skill: Skill, display_name: String) -> void:
+	var wheel = radial_menu.get_node_or_null("WheelBackGround")
+	if is_instance_valid(wheel):
+		wheel.show_sidebar_tooltip(skill, display_name)
+
+func hide_mobile_skill_tooltip() -> void:
+	var wheel = radial_menu.get_node_or_null("WheelBackGround")
+	if is_instance_valid(wheel):
+		wheel.hide_sidebar_tooltip()
+
 var tiles: Dictionary[Vector2i, TileScene] = {}
 var hovered_tile: TileScene
 var target_tiles: Array[TileScene] = []
@@ -56,6 +70,11 @@ var active_aoe_effects: Array = []
 var aoe_tile_owners: Dictionary = {}
 var aoe_hover_glow: Node2D
 var suppressed_aoe_hover_tiles: Array[Vector2i] = []
+const LONG_TOUCH_DURATION := 0.25
+var mobile_touch_active := false
+var mobile_touch_start_time := 0.0
+var mobile_touch_screen_pos := Vector2.ZERO
+var is_long_touching_aoe := false
 
 enum Action {
 	MOVE,
@@ -75,6 +94,7 @@ var winning_team: int = -1
 var win_reason: String = ""
 var top_capture_hud: TopCaptureHUD = null
 var match_end_modal: MatchEndModal = null
+var team_health_hud: TeamHealthHUD = null
 
 @onready var netplay: Node = get_node("/root/Netplay")
 @onready var unit_panel: UnitPanel = $CanvasLayer/BottomHUD
@@ -143,6 +163,15 @@ func _ready() -> void:
 	spawn_team(players_characters)
 	spawn_team(enemies_characters)
 	update_unit_visuals()
+
+	team_health_hud = $CanvasLayer.get_node_or_null("TeamHealthHUD") as TeamHealthHUD
+	if not team_health_hud and has_node("CanvasLayer"):
+		team_health_hud = preload("res://scenes/board/team_health_hud.gd").new()
+		team_health_hud.name = "TeamHealthHUD"
+		$CanvasLayer.add_child(team_health_hud)
+	if team_health_hud:
+		team_health_hud.setup(self)
+
 	unit_panel.move_pressed.connect(handle_move_pressed)
 	unit_panel.skill1_pressed.connect(handle_skill_pressed.bind(0, Action.SKILL1))
 	unit_panel.skill2_pressed.connect(handle_skill_pressed.bind(1, Action.SKILL2))
@@ -257,8 +286,8 @@ func update_board_layout() -> void:
 	var viewport_size := get_viewport_rect().size
 	var board_size := viewport_size.y * 0.80
 	scale = Vector2.ONE * board_size / (HEIGHT * TILE_SIZE)
-	# Leave 11% above the board and 9% below.
-	position = Vector2((viewport_size.x - board_size) / 2.0, viewport_size.y * 0.11)
+	# Leave 13.5% above the board to give comfortable breathing room below the scoreboard.
+	position = Vector2((viewport_size.x - board_size) / 2.0, viewport_size.y * 0.135)
 	# Both peers retain the same logical coordinates. Only the guest's view rotates.
 	rotation = PI if netplay.is_client() else 0.0
 	if netplay.is_client():
@@ -267,7 +296,65 @@ func update_board_layout() -> void:
 		if child is Unit or child == radial_menu:
 			child.rotation = -rotation
 
+func has_aoe_at(grid_pos: Vector2i) -> bool:
+	if not tiles.has(grid_pos):
+		return false
+	if netplay.is_client() and netplay.state_codec != null:
+		return not netplay.state_codec.get_replica_zone_tiles(grid_pos).is_empty()
+	var effect = aoe_tile_owners.get(grid_pos)
+	return effect != null and effect in active_aoe_effects
+
+func _update_mobile_long_touch() -> void:
+	if not mobile_touch_active:
+		if is_long_touching_aoe:
+			is_long_touching_aoe = false
+			clear_hover()
+		return
+	var local_pos := to_local(mobile_touch_screen_pos)
+	var grid_pos := Vector2i(floori(local_pos.x / TILE_SIZE), floori(local_pos.y / TILE_SIZE))
+	if not is_long_touching_aoe:
+		var elapsed := (Time.get_ticks_msec() / 1000.0) - mobile_touch_start_time
+		if elapsed >= LONG_TOUCH_DURATION and has_aoe_at(grid_pos):
+			is_long_touching_aoe = true
+	else:
+		if not has_aoe_at(grid_pos):
+			is_long_touching_aoe = false
+			clear_hover()
+
+func _input(event: InputEvent) -> void:
+	if not is_mobile():
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			mobile_touch_active = true
+			mobile_touch_start_time = Time.get_ticks_msec() / 1000.0
+			mobile_touch_screen_pos = get_canvas_transform().affine_inverse() * event.position
+			is_long_touching_aoe = false
+		else:
+			mobile_touch_active = false
+			if is_long_touching_aoe:
+				is_long_touching_aoe = false
+				clear_hover()
+	elif event is InputEventScreenDrag:
+		mobile_touch_screen_pos = get_canvas_transform().affine_inverse() * event.position
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			if not mobile_touch_active:
+				mobile_touch_active = true
+				mobile_touch_start_time = Time.get_ticks_msec() / 1000.0
+				mobile_touch_screen_pos = get_canvas_transform().affine_inverse() * event.position
+				is_long_touching_aoe = false
+		else:
+			mobile_touch_active = false
+			if is_long_touching_aoe:
+				is_long_touching_aoe = false
+				clear_hover()
+	elif event is InputEventMouseMotion and mobile_touch_active:
+		mobile_touch_screen_pos = get_canvas_transform().affine_inverse() * event.position
+
 func _process(_delta: float) -> void:
+	if is_mobile():
+		_update_mobile_long_touch()
 	update_radial_menu()
 	if netplay.is_networked():
 		var enabled: bool = netplay.can_input()
@@ -303,6 +390,8 @@ func is_sharing_target_preview() -> bool:
 func get_target_mouse_position() -> Vector2:
 	if netplay.is_networked() and (netplay.dispatching or netplay.executing_command or not netplay.owns_turn()):
 		return to_global(netplay.pointer)
+	if is_mobile() and mobile_touch_active:
+		return mobile_touch_screen_pos
 	return get_global_mouse_position()
 
 func refresh_target_preview() -> void:
@@ -343,7 +432,7 @@ func refresh_remote_target_preview(cursor: Vector2) -> void:
 	hovered_tile = previous_hovered_tile
 
 func update_local_hover() -> void:
-	var local_mouse := to_local(get_global_mouse_position())
+	var local_mouse := to_local(get_target_mouse_position())
 	var grid_pos := Vector2i(floori(local_mouse.x / TILE_SIZE), floori(local_mouse.y / TILE_SIZE))
 	if not tiles.has(grid_pos):
 		clear_hover()
@@ -427,6 +516,14 @@ func update_health_previews() -> void:
 		unit.show_health_preview(preview_damage, preview_healing)
 
 func update_aoe_hover(position: Vector2i) -> void:
+	if is_mobile() and not is_long_touching_aoe:
+		update_zone_cloud_hover([])
+		if is_instance_valid(aoe_hover_glow):
+			for previous_position in aoe_hover_glow.positions:
+				if tiles.has(previous_position):
+					tiles[previous_position].set_aoe_hovered(false)
+			aoe_hover_glow.set_tiles([])
+		return
 	var highlighted: Array[Vector2i] = []
 	var effect = aoe_tile_owners.get(position)
 	if position not in suppressed_aoe_hover_tiles:
@@ -447,6 +544,8 @@ func update_aoe_hover(position: Vector2i) -> void:
 		# Remember the entire zone until the cursor leaves, even after targeting ends.
 		suppressed_aoe_hover_tiles.assign(highlighted)
 		highlighted.clear()
+	elif is_mobile():
+		suppressed_aoe_hover_tiles.clear()
 	elif position in suppressed_aoe_hover_tiles:
 		highlighted.clear()
 	update_zone_cloud_hover(highlighted)
@@ -467,6 +566,10 @@ func update_aoe_hover(position: Vector2i) -> void:
 	aoe_hover_glow.set_tiles(highlighted, color)
 
 func suppress_aoe_hover(positions: Array[Vector2i]) -> void:
+	if is_mobile():
+		suppressed_aoe_hover_tiles.clear()
+		clear_hover()
+		return
 	suppressed_aoe_hover_tiles.assign(positions)
 	clear_hover()
 
@@ -672,6 +775,7 @@ func clear_target_tiles():
 	target_tiles.clear()
 
 func clear_skill_state():
+	hide_mobile_skill_tooltip()
 	clear_impact_preview()
 	clear_target_tiles()
 	targeting_skill = false
@@ -771,6 +875,10 @@ func handle_skill_pressed(skill_number: int, action: Action):
 	active_skill = skill
 	current_action = action
 	active_skill.begin(self, active_unit)
+	if is_mobile() and targeting_skill:
+		var names := [active_unit.data.skill1_name, active_unit.data.skill2_name, active_unit.data.skill3_name, active_unit.data.skill4_name]
+		var display_name: String = names[skill_number] if skill_number < names.size() else skill.skill_name
+		show_mobile_skill_tooltip(skill, display_name)
 			
 func get_direction_to_mouse(position: Vector2, diagonal = false) -> Vector2i:
 	var mouse_pos := get_target_mouse_position()
@@ -830,6 +938,10 @@ func play_skill_presentation(
 	skill: Skill,
 	target_positions: Array[Vector2i]
 ) -> void:
+	if netplay.is_networked() and not netplay.is_client():
+		var texture_path := skill.cutscene_texture.resource_path if skill.cutscene_texture else ""
+		var video_path := skill.cutscene_video.resource_path if skill.cutscene_video else ""
+		netplay.broadcast_skill_presentation(skill.skill_name, target_positions, texture_path, video_path)
 	presenting_skill = true
 	update_radial_menu()
 	show_locked_tiles(target_positions)
@@ -845,6 +957,41 @@ func play_skill_presentation(
 	skill_cutscene.hide()
 	show_affected_tiles(target_positions)
 	await get_tree().create_timer(0.5).timeout
+	for target in target_positions:
+		if tiles.has(target):
+			tiles[target].clear_attack()
+	presenting_skill = false
+	update_radial_menu()
+
+func play_skill_presentation_from_network(
+	_skill_name: String,
+	target_positions: Array[Vector2i],
+	texture_path: String,
+	video_path: String
+) -> void:
+	presenting_skill = true
+	update_radial_menu()
+	show_locked_tiles(target_positions)
+	await get_tree().create_timer(0.5).timeout
+	if not texture_path.is_empty() and ResourceLoader.exists(texture_path):
+		var tex = load(texture_path)
+		if tex is Texture2D:
+			show_skill_cutscene(tex)
+			await get_tree().create_timer(1.0).timeout
+	if not video_path.is_empty() and ResourceLoader.exists(video_path):
+		var vid = load(video_path)
+		if vid is VideoStream:
+			var cutscene_player = show_skill_cutscene_video(vid)
+			await get_tree().create_timer(3.0).timeout
+			cutscene_player.stop()
+			cutscene_player.stream = null
+	skill_cutscene.hide()
+	show_affected_tiles(target_positions)
+	await get_tree().create_timer(0.5).timeout
+	for target in target_positions:
+		if tiles.has(target):
+			tiles[target].clear_attack()
+	clear_target_tiles()
 	presenting_skill = false
 	update_radial_menu()
 	

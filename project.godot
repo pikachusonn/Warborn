@@ -21,8 +21,10 @@ Netplay="*res://network/netplay.gd"
 
 [display]
 
-window/size/viewport_width=1920
-window/size/viewport_height=900
+window/size/viewport_width=1290
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 
 [input]
 
@@ -54,3 +56,4 @@ move_right={
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+textures/vram_compression/import_etc2_astc=true

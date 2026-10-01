@@ -61,6 +61,7 @@ const DUST_BURST := preload("res://scenes/effects/dust_burst.tscn")
 @onready var healing_preview: ColorRect = $HPBar/HealingPreview
 @onready var hp_label: Label = $HPBar/HPLabel
 @onready var preview_amount_label: Label = $PreviewAmount
+var is_shaking := false
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -278,6 +279,7 @@ func is_defeated() -> bool:
 	return current_health <= 0
 
 func set_defeated_visual() -> void:
+	is_shaking = false
 	play_dust_burst()
 	modulate.a = DEFEATED_OPACITY
 	z_index = DEFEATED_Z_INDEX
@@ -290,14 +292,17 @@ func set_hovered(hovered: bool):
 		hp_bar.hide()
 		effects_wrapper.set_position(Vector2i(-32, -52))
 		return
-	hp_bar.visible = hovered or health_preview_active
-	if hovered or health_preview_active:
+	hp_bar.visible = hovered or health_preview_active or is_shaking
+	if hovered or health_preview_active or is_shaking:
 		update_hp_bar()
 		effects_wrapper.set_position(Vector2i(-32, -82))
 	else:
 		effects_wrapper.set_position(Vector2i(-32, -52))
 
 func shake():
+	if is_shaking or is_defeated():
+		return
+	is_shaking = true
 	var original_position := position
 	for i in range(4):
 		position = original_position + Vector2(randf_range(-3, 3), 0)
@@ -305,7 +310,9 @@ func shake():
 	position = original_position
 	set_hovered(true)
 	await get_tree().create_timer(1.0).timeout
-	set_hovered(false)
+	is_shaking = false
+	if not hovered_for_ui:
+		set_hovered(false)
 
 func add_status(status: String, stacks: int = 1):
 	status_effects[status] = status_effects.get(status, 0) + stacks

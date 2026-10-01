@@ -11,7 +11,7 @@ var bolt_material: ShaderMaterial
 func _ready() -> void:
 	layer = 30
 	panel = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(360, 220)
+	panel.custom_minimum_size = Vector2(320, 200)
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(panel)
@@ -137,6 +137,47 @@ func show_capture(anchor: Vector2, can_capture: bool) -> void:
 		clampf(desired.x, 10, maxf(10, viewport_size.x - panel.size.x - 10)),
 		clampf(desired.y, 10, maxf(10, viewport_size.y - panel.size.y - 10))
 	)
+
+func show_skill_sidebar(skill: Skill, display_name: String) -> void:
+	title.text = skill.skill_name if not skill.skill_name.is_empty() else display_name
+	bolt_material.set_shader_parameter("inactive", skill.get_action_cost() == 0)
+	damage_label.text = "%d damage" % skill.get_tooltip_damage()
+	cooldown_label.text = "%d turns" % skill.cooldown
+	if skill.cooldown_remaining > 0:
+		cooldown_label.text += " (%d left)" % skill.cooldown_remaining
+	description_label.text = skill.description
+	panel.reset_size()
+	panel.show()
+	var viewport_size := get_viewport().get_visible_rect().size
+	var board_size := viewport_size.y * 0.80
+	var board_right := (viewport_size.x + board_size) / 2.0
+	var right_space := viewport_size.x - board_right
+	var panel_width := panel.size.x
+	var target_x := board_right + (right_space - panel_width) / 2.0
+	target_x = clampf(target_x, board_right + 8.0, viewport_size.x - panel_width - 8.0)
+	var target_y := (viewport_size.y - panel.size.y) / 2.0
+	panel.position = Vector2(target_x, clampf(target_y, 20.0, viewport_size.y - panel.size.y - 20.0))
+
+func show_capture_sidebar(can_capture: bool) -> void:
+	title.text = "Capture Zone"
+	bolt_material.set_shader_parameter("inactive", false)
+	damage_label.text = "+1 Capture Point"
+	cooldown_label.text = "3 Turns"
+	var desc := "Spend 1 AP to begin capturing the zone. Hold position inside the zone until the start of your 3rd turn to score 1 Capture Point (2 points to win).\n\nMoving or being displaced outside cancels the capture. Each unit can complete a capture once per match."
+	if not can_capture:
+		desc += "\n\n(Requirements not met)"
+	description_label.text = desc
+	panel.reset_size()
+	panel.show()
+	var viewport_size := get_viewport().get_visible_rect().size
+	var board_size := viewport_size.y * 0.80
+	var board_right := (viewport_size.x + board_size) / 2.0
+	var right_space := viewport_size.x - board_right
+	var panel_width := panel.size.x
+	var target_x := board_right + (right_space - panel_width) / 2.0
+	target_x = clampf(target_x, board_right + 8.0, viewport_size.x - panel_width - 8.0)
+	var target_y := (viewport_size.y - panel.size.y) / 2.0
+	panel.position = Vector2(target_x, clampf(target_y, 20.0, viewport_size.y - panel.size.y - 20.0))
 
 func hide_tooltip() -> void:
 	panel.hide()

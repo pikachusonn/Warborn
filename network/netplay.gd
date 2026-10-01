@@ -338,6 +338,15 @@ func _snapshot(changes: Dictionary) -> void:
 	executing_command = last_snapshot.busy
 	state_codec.apply(last_snapshot)
 
+func broadcast_skill_presentation(skill_name: String, target_positions: Array[Vector2i], texture_path: String, video_path: String) -> void:
+	if mode == Mode.HOST and guest_id != 0:
+		_play_skill_presentation.rpc_id(guest_id, skill_name, target_positions, texture_path, video_path)
+
+@rpc("authority", "call_remote", "reliable", 0)
+func _play_skill_presentation(skill_name: String, target_positions: Array[Vector2i], texture_path: String, video_path: String) -> void:
+	if mode == Mode.CLIENT and is_instance_valid(grid):
+		grid.play_skill_presentation_from_network(skill_name, target_positions, texture_path, video_path)
+
 func _make_overlay() -> void:
 	overlay = CanvasLayer.new()
 	overlay.layer = 100

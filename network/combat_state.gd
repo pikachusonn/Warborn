@@ -96,20 +96,31 @@ func apply(state: Dictionary) -> void:
 	grid.current_action = combat.action
 	grid.active_skill = grid.active_unit.skills[combat.skill] if grid.active_unit and combat.skill >= 0 else null
 	grid.targeting_skill = combat.targeting
+	if GridField.is_mobile():
+		if grid.targeting_skill and grid.active_skill and is_instance_valid(grid.active_unit):
+			var names := [grid.active_unit.data.skill1_name, grid.active_unit.data.skill2_name, grid.active_unit.data.skill3_name, grid.active_unit.data.skill4_name]
+			var display_name: String = names[combat.skill] if combat.skill < names.size() else grid.active_skill.skill_name
+			grid.show_mobile_skill_tooltip(grid.active_skill, display_name)
+		elif not grid.targeting_skill:
+			grid.hide_mobile_skill_tooltip()
 	grid.resolving_turn_start = combat.resolving
-	grid.presenting_skill = combat.presenting
+	if not grid.presenting_skill:
+		grid.presenting_skill = combat.presenting
 	grid.radial_skills_open = combat.menu
 	grid.remote_skill_availability.assign(combat.availability)
-	grid.target_tiles.clear()
-	for pos in combat.targets:
-		grid.target_tiles.append(grid.tiles[pos])
-	grid.impact_preview_tiles.clear()
-	for pos in combat.impact:
-		grid.impact_preview_tiles.append(grid.tiles[pos])
+	if not grid.presenting_skill:
+		grid.target_tiles.clear()
+		for pos in combat.targets:
+			grid.target_tiles.append(grid.tiles[pos])
+		grid.impact_preview_tiles.clear()
+		for pos in combat.impact:
+			grid.impact_preview_tiles.append(grid.tiles[pos])
 	for unit: Unit in units:
 		var data: Dictionary = state["unit_%d" % unit.network_id]
+		var previous_health := unit.current_health
 		unit.grid_position = data.tile
-		unit.position = data.position
+		if not unit.is_shaking:
+			unit.position = data.position
 		unit.current_health = data.health
 		unit.temp_health = data.shield
 		unit.status_effects = data.statuses.duplicate()
@@ -125,6 +136,8 @@ func apply(state: Dictionary) -> void:
 		unit.update_status_icons()
 		unit.has_completed_capture = data.get("has_captured", false)
 		health_views[unit.network_id] = data
+		if previous_health > 0 and data.health < previous_health:
+			unit.shake()
 	update_health_display()
 	if state.has("capture") and grid.capture_zone != null:
 		var cap: Dictionary = state.capture
@@ -146,7 +159,8 @@ func apply(state: Dictionary) -> void:
 			var tile: TileScene = grid.tiles[Vector2i(x, y)]
 			var data: Array = state.tiles[index]
 			index += 1
-			tile.modulate = data[0]
+			if not grid.presenting_skill:
+				tile.modulate = data[0]
 			if data[1]:
 				if tile.quagmire_overlay.texture == null or tile.quagmire_overlay.texture.resource_path != data[2]:
 					tile.show_quagmire(Unit.Side.PLAYER, load(data[2]))
@@ -225,13 +239,14 @@ func set_replica_zone_hover(positions: Array[Vector2i]) -> void:
 
 func update_health_display() -> void:
 	# Mirror shared combat feedback, while allowing private local unit inspection.
-	var local_mouse := grid.to_local(grid.get_global_mouse_position())
+	var local_mouse := grid.to_local(grid.get_target_mouse_position())
 	var hovered_tile := Vector2i((local_mouse / GridField.TILE_SIZE).floor())
 	for unit: Unit in grid.player_units + grid.enemy_units:
 		if not health_views.has(unit.network_id):
 			continue
 		var data: Dictionary = health_views[unit.network_id]
-		unit.set_hovered(unit.grid_position == hovered_tile)
+		if not unit.is_shaking:
+			unit.set_hovered(unit.grid_position == hovered_tile)
 		unit.show_health_preview(data.preview_damage, data.preview_healing)
 
 func _capture_markers() -> Array:

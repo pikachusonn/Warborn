@@ -32,6 +32,7 @@ var capture_mode := false
 var capture_available := false
 var skill_availability: Array[bool] = []
 var skill_tooltip: CanvasLayer
+var is_sidebar_mode := false
 const SKILL_COLOR := Color(1.0, 0.85, 0.3)
 
 func set_skills_mode(value: bool) -> void:
@@ -155,7 +156,22 @@ func update_hover_from_point(point: Vector2) -> void:
 		update_icon_colors()
 		queue_redraw()
 
+func show_sidebar_tooltip(skill: Skill, display_name: String) -> void:
+	is_sidebar_mode = true
+	if is_instance_valid(skill_tooltip):
+		skill_tooltip.show_skill_sidebar(skill, display_name)
+
+func hide_sidebar_tooltip() -> void:
+	is_sidebar_mode = false
+	if is_instance_valid(skill_tooltip):
+		skill_tooltip.hide_tooltip()
+
 func update_skill_tooltip(segment: int) -> void:
+	if GridField.is_mobile():
+		if not is_sidebar_mode:
+			skill_tooltip.hide_tooltip()
+		return
+
 	var grid := get_parent().get_parent() as GridField
 	if not is_visible_in_tree() or segment < 0 or grid == null:
 		skill_tooltip.hide_tooltip()
