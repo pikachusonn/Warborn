@@ -19,7 +19,6 @@ metadata/_custom_type_script = "uid://dkptv4kdimxl8"
 script = ExtResource("1_u42s6")
 health = 70
 damage = 5
-mobility = 2
 ally_sprite_frames = ExtResource("1_ylexl")
 enemy_sprite_frames = ExtResource("2_ar63t")
 skill1_name = "Mud Pillar"

@@ -10,6 +10,7 @@ class_name UnitPanel
 @onready var skill2_button: Button = $HBoxContainer/VBoxContainer/Actions/Skill2
 @onready var skill3_button: Button = $HBoxContainer/VBoxContainer/Actions/Skill3
 @onready var skill4_button: Button = $HBoxContainer/VBoxContainer/Actions/Skill4
+@onready var capture_button: Button = $HBoxContainer/VBoxContainer/Actions/Capture
 @onready var end_turn_button: Button = $HBoxContainer/VBoxContainer/Actions/EndTurn
 @onready var energy_label: Label = $HBoxContainer/PotraitContainer/Energy/Label
 
@@ -18,6 +19,7 @@ signal skill1_pressed
 signal skill2_pressed
 signal skill3_pressed
 signal skill4_pressed
+signal capture_pressed
 signal end_turn_pressed
 
 var active_skill_button: Button = null
@@ -30,7 +32,12 @@ func _ready() -> void:
 	skill2_button.pressed.connect(_on_skill2_pressed)
 	skill3_button.pressed.connect(_on_skill3_pressed)
 	skill4_button.pressed.connect(_on_skill4_pressed)
+	if capture_button:
+		capture_button.pressed.connect(_on_capture_pressed)
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
+
+func _on_capture_pressed():
+	capture_pressed.emit()
 	
 func _on_move_pressed():
 	set_skill_active(move_button)
@@ -57,7 +64,7 @@ func _on_end_turn_pressed():
 	end_turn_pressed.emit()
 	
 func show_unit(unit: Unit):
-	show()
+	#show()
 	portrait.texture = unit.sprite.sprite_frames.get_frame_texture("idle", 0)
 	update_health(unit)
 	skill1_button.text = unit.data.skill1_name

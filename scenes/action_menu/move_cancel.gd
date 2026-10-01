@@ -6,12 +6,14 @@ const RADIUS := 30.0
 var hovered := false
 
 func _process(_delta: float) -> void:
-	var next_hovered := get_local_mouse_position().length() <= RADIUS
+	var next_hovered: bool = get_node("/root/Netplay").can_input() and get_local_mouse_position().length() <= RADIUS
 	if next_hovered != hovered:
 		hovered = next_hovered
 		queue_redraw()
 
 func _input(event: InputEvent) -> void:
+	if not get_node("/root/Netplay").can_input():
+		return
 	if not is_visible_in_tree():
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:

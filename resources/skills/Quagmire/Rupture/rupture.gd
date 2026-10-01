@@ -22,7 +22,7 @@ func begin(grid_field: GridField, unit: Unit) -> void:
 		mud_pillar_skill.highlight_pillar(pos, true)    
 		
 func update_preview(grid_field: GridField, _unit: Unit) -> void:
-	var mouse_pos := grid_field.get_global_mouse_position()
+	var mouse_pos := grid_field.get_target_mouse_position()
 	var local_mouse := grid_field.to_local(mouse_pos)
 	var grid_pos := Vector2i(local_mouse / GridField.TILE_SIZE)
 	if not mud_pillar_skill.active_pillars.has(grid_pos):

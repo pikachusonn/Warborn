@@ -5,6 +5,7 @@ func _initialize() -> void:
 
 func run() -> void:
 	var grid := GridField.new()
+	grid.netplay = root.get_node("Netplay")
 	var tile_scene := load("res://scenes/tile/tile.tscn") as PackedScene
 	for x in range(6):
 		for y in range(6):

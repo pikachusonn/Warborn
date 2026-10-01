@@ -36,8 +36,9 @@ func update_preview(
 ) -> void:
 	pass
 
-func cancel(grid: GridField, unit: Unit) -> void:
-	grid.clean_up_skill()
+func cancel(grid: GridField, _unit: Unit) -> void:
+	grid.clear_move_range()
+	grid.clear_skill_state()
 
 func get_target_tiles(grid_field: GridField,unit: Unit, direction: Vector2i, distance: int = 1) -> Array[Vector2i]:
 	return []

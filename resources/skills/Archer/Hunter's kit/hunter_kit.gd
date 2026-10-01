@@ -15,8 +15,8 @@ func begin(
 	unit: Unit
 ) -> void:
 	owner = unit
-	grid_field.targeting_skill = true
 	grid_field.clear_skill_state()
+	grid_field.targeting_skill = true
 
 	if not deployed:
 		show_deploy_tiles(grid_field)

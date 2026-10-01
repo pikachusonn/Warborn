@@ -17,14 +17,26 @@ const EFFECTS = {
 @export var cooldown: int
 @export var status_tooltip_scene: PackedScene
 
+signal position_changed(unit: Unit)
+signal defeated(unit: Unit)
+
 var side: Side
+var network_id := -1
 var current_health: int
 var temp_health: int
-var grid_position: Vector2i
+var has_completed_capture: bool = false
+var grid_position: Vector2i:
+	set(value):
+		var changed := grid_position != value
+		grid_position = value
+		if changed:
+			position_changed.emit(self)
 var is_selected := false
 var status_effects: Dictionary = {}
 var status_tooltip: StatusTooltip
 var health_preview_active := false
+var preview_damage := 0
+var preview_healing := 0
 var hovered_for_ui := false
 
 const DEFEATED_OPACITY := 0.5
@@ -49,6 +61,7 @@ const DUST_BURST := preload("res://scenes/effects/dust_burst.tscn")
 @onready var healing_preview: ColorRect = $HPBar/HealingPreview
 @onready var hp_label: Label = $HPBar/HPLabel
 @onready var preview_amount_label: Label = $PreviewAmount
+var is_shaking := false
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -64,6 +77,7 @@ func _process(delta: float) -> void:
 	pass
 
 func setup(pos: Vector2i, unit_data: UnitData, unit_side):
+	has_completed_capture = false
 	z_index = LIVING_Z_INDEX
 	grid_position = pos
 	data = unit_data
@@ -177,6 +191,8 @@ func show_health_preview(damage_amount: int, healing_amount: int) -> void:
 	clear_health_preview()
 	if is_defeated() or (damage_amount <= 0 and healing_amount <= 0):
 		return
+	preview_damage = damage_amount
+	preview_healing = healing_amount
 	update_hp_bar()
 	health_preview_active = true
 	hp_bar.show()
@@ -223,6 +239,8 @@ func show_health_preview(damage_amount: int, healing_amount: int) -> void:
 		preview_amount_label.show()
 
 func clear_health_preview() -> void:
+	preview_damage = 0
+	preview_healing = 0
 	var restore_hp_bar := health_preview_active
 	health_preview_active = false
 	shield_loss_preview.hide()
@@ -247,6 +265,7 @@ func take_damage(amount: int) -> void:
 	update_hp_bar()
 	if is_defeated():
 		set_defeated_visual()
+		defeated.emit(self)
 
 func heal(amount: int):
 	if is_defeated() or amount <= 0:
@@ -260,6 +279,7 @@ func is_defeated() -> bool:
 	return current_health <= 0
 
 func set_defeated_visual() -> void:
+	is_shaking = false
 	play_dust_burst()
 	modulate.a = DEFEATED_OPACITY
 	z_index = DEFEATED_Z_INDEX
@@ -272,14 +292,17 @@ func set_hovered(hovered: bool):
 		hp_bar.hide()
 		effects_wrapper.set_position(Vector2i(-32, -52))
 		return
-	hp_bar.visible = hovered or health_preview_active
-	if hovered or health_preview_active:
+	hp_bar.visible = hovered or health_preview_active or is_shaking
+	if hovered or health_preview_active or is_shaking:
 		update_hp_bar()
 		effects_wrapper.set_position(Vector2i(-32, -82))
 	else:
 		effects_wrapper.set_position(Vector2i(-32, -52))
 
 func shake():
+	if is_shaking or is_defeated():
+		return
+	is_shaking = true
 	var original_position := position
 	for i in range(4):
 		position = original_position + Vector2(randf_range(-3, 3), 0)
@@ -287,7 +310,9 @@ func shake():
 	position = original_position
 	set_hovered(true)
 	await get_tree().create_timer(1.0).timeout
-	set_hovered(false)
+	is_shaking = false
+	if not hovered_for_ui:
+		set_hovered(false)
 
 func add_status(status: String, stacks: int = 1):
 	status_effects[status] = status_effects.get(status, 0) + stacks

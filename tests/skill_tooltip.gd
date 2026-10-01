@@ -24,6 +24,11 @@ func run() -> void:
 	assert(kit.get_action_cost() == 1)
 	kit.deployed = true
 	assert(kit.get_action_cost() == 0)
+	tooltip.show_skill_sidebar(kit, "Hunter's Kit")
+	assert(tooltip.panel.visible)
+	assert(tooltip.panel.position.x > 0 and tooltip.panel.position.y >= 0)
+	tooltip.show_capture_sidebar(true)
+	assert(tooltip.panel.visible)
 	tooltip.hide_tooltip()
 	assert(not tooltip.panel.visible)
 	tooltip.free()
