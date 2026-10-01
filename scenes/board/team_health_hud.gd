@@ -271,17 +271,59 @@ func _process(_delta: float) -> void:
 
 			entry.hp_label.text = "%d / %d" % [real_health + shield_health, max_health]
 
-func get_idle_frame_texture(unit: Unit) -> Texture2D:
+var face_texture_cache: Dictionary = {}
+
+func get_face_texture(unit: Unit) -> Texture2D:
 	if not is_instance_valid(unit):
 		return null
+	if face_texture_cache.has(unit) and face_texture_cache[unit] != null:
+		return face_texture_cache[unit]
+
+	var base_tex: Texture2D = null
 	if is_instance_valid(unit.sprite) and unit.sprite.sprite_frames:
 		if unit.sprite.sprite_frames.has_animation("idle"):
-			return unit.sprite.sprite_frames.get_frame_texture("idle", 0)
-	if is_instance_valid(unit.data):
+			base_tex = unit.sprite.sprite_frames.get_frame_texture("idle", 0)
+	if base_tex == null and is_instance_valid(unit.data):
 		var sf: SpriteFrames = unit.data.ally_sprite_frames if unit.side == Unit.Side.PLAYER else unit.data.enemy_sprite_frames
 		if sf and sf.has_animation("idle"):
-			return sf.get_frame_texture("idle", 0)
-	return null
+			base_tex = sf.get_frame_texture("idle", 0)
+
+	if base_tex == null:
+		return null
+
+	if not (base_tex is AtlasTexture):
+		face_texture_cache[unit] = base_tex
+		return base_tex
+
+	var atlas_tex := base_tex as AtlasTexture
+	var root_texture: Texture2D = atlas_tex.atlas
+	var frame_rect: Rect2 = atlas_tex.region
+
+	var unit_name := get_unit_name(unit).to_lower()
+	var face_local_rect := Rect2(65, 50, 64, 64)
+
+	if unit_name.contains("berserker"):
+		face_local_rect = Rect2(95, 230, 180, 180)
+	elif unit_name.contains("quagmire"):
+		face_local_rect = Rect2(100, 255, 175, 175)
+	elif unit_name.contains("breacher"):
+		face_local_rect = Rect2(66, 50, 64, 64)
+	elif unit_name.contains("archer"):
+		face_local_rect = Rect2(64, 50, 64, 64)
+	elif frame_rect.size.y > 300:
+		face_local_rect = Rect2(95, 235, 180, 180)
+	else:
+		face_local_rect = Rect2(frame_rect.size.x * 0.33, frame_rect.size.y * 0.25, frame_rect.size.x * 0.34, frame_rect.size.x * 0.34)
+
+	var face_atlas := AtlasTexture.new()
+	face_atlas.atlas = root_texture
+	face_atlas.region = Rect2(frame_rect.position + face_local_rect.position, face_local_rect.size)
+
+	face_texture_cache[unit] = face_atlas
+	return face_atlas
+
+func get_idle_frame_texture(unit: Unit) -> Texture2D:
+	return get_face_texture(unit)
 
 func get_unit_name(unit: Unit) -> String:
 	if not is_instance_valid(unit) or unit.data == null:

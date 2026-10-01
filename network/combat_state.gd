@@ -20,7 +20,7 @@ func capture() -> Dictionary:
 	for index in 4:
 		availability.append(grid.can_use_skill(index))
 	state["combat"] = {
-		"active": active_id, "turn": grid.turn_index, "energy": grid.energy,
+		"active": active_id, "turn": grid.turn_index, "round": grid.round_number, "energy": grid.energy,
 		"free": grid.free_movement, "action": grid.current_action,
 		"skill": skill_index, "targeting": grid.targeting_skill,
 		"resolving": grid.resolving_turn_start, "presenting": grid.presenting_skill,
@@ -91,6 +91,8 @@ func apply(state: Dictionary) -> void:
 	grid.active_unit = units[combat.active] if combat.active >= 0 else null
 	grid.radial_menu_owner = grid.active_unit
 	grid.turn_index = combat.turn
+	if combat.has("round"):
+		grid.round_number = combat.round
 	grid.energy = combat.energy
 	grid.free_movement = combat.free
 	grid.current_action = combat.action

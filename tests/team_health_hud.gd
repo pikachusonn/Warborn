@@ -34,8 +34,8 @@ func run() -> void:
 		var unit: Unit = team_units[i]
 		assert(row_dict.unit == unit, "Row unit must match team unit")
 		assert(row_dict.icon_rect.texture != null, "Icon must have idle frame texture")
-		var expected_tex := unit.sprite.sprite_frames.get_frame_texture("idle", 0)
-		assert(row_dict.icon_rect.texture == expected_tex, "Icon texture must be the first frame of idle animation")
+		var expected_tex := hud.get_face_texture(unit)
+		assert(row_dict.icon_rect.texture == expected_tex, "Icon texture must be the zoomed character face")
 		assert(row_dict.hp_bar.max_value == unit.data.health, "HP bar max value should match unit health")
 		assert(row_dict.hp_bar.value == unit.current_health, "HP bar value should match unit current health")
 
@@ -70,8 +70,8 @@ func run() -> void:
 	assert(client_team.size() == 4, "Client team should have 4 units")
 	for i in range(4):
 		assert(client_team[i] == grid.enemy_units[i], "Client team should match enemy_units")
-		var expected_client_tex := grid.enemy_units[i].sprite.sprite_frames.get_frame_texture("idle", 0)
-		assert(hud.unit_rows[i].icon_rect.texture == expected_client_tex, "Client row must use enemy unit idle frame")
+		var expected_client_tex := hud.get_face_texture(grid.enemy_units[i])
+		assert(hud.unit_rows[i].icon_rect.texture == expected_client_tex, "Client row must use zoomed enemy face")
 
 	print("PASS: TeamHealthHUD unit icons, health bars, shields, defeat state, and multiplayer host/client switching")
 	quit()

@@ -45,6 +45,7 @@ enum Turn {
 }
 var turn_order: Array[Unit] = []
 var turn_index := 0
+var round_number := 1
 var active_unit: Unit
 var energy := 0
 var free_movement := false
@@ -156,7 +157,7 @@ func _ready() -> void:
 
 	top_capture_hud = $CanvasLayer.get_node_or_null("TopCaptureHUD") as TopCaptureHUD
 	if top_capture_hud:
-		top_capture_hud.setup(capture_zone)
+		top_capture_hud.setup(capture_zone, self)
 
 	match_end_modal = $CanvasLayer.get_node_or_null("MatchEndModal") as MatchEndModal
 
@@ -696,6 +697,8 @@ func advance_to_next_living_unit() -> bool:
 	for offset in range(1, turn_order.size() + 1):
 		var candidate_index := (turn_index + offset) % turn_order.size()
 		if not turn_order[candidate_index].is_defeated():
+			if candidate_index <= turn_index:
+				round_number += 1
 			turn_index = candidate_index
 			return true
 	return false
@@ -1009,6 +1012,7 @@ func initialize_turn_order():
 			return a.data.speed > b.data.speed
 	)
 	turn_index = 0
+	round_number = 1
 
 func start_unit_turn(unit: Unit):
 	if netplay.is_client():

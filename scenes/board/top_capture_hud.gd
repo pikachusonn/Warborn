@@ -2,9 +2,14 @@ extends Control
 class_name TopCaptureHUD
 
 var capture_zone: CaptureZoneManager
+var grid: GridField = null
 
 # Node references
 var panel: PanelContainer
+var round_label: Label
+var turn_order_row: HBoxContainer
+var unit_order_nodes: Array[Dictionary] = []
+
 var player_label: Label
 var enemy_label: Label
 var player_points_container: HBoxContainer
@@ -20,6 +25,10 @@ const COLOR_ENEMY := Color(1.0, 0.35, 0.25, 1.0)
 const COLOR_ENEMY_DIM := Color(0.4, 0.15, 0.15, 0.6)
 const COLOR_NEUTRAL_STEP := Color(0.2, 0.24, 0.3, 0.7)
 const COLOR_NEUTRAL_TEXT := Color(0.65, 0.7, 0.78, 1.0)
+
+const COLOR_ROUND_TEXT := Color(1.0, 0.86, 0.35, 1.0)
+const COLOR_ACTIVE_BORDER := Color(1.0, 0.88, 0.25, 1.0)
+const COLOR_DEFEATED_BORDER := Color(0.25, 0.25, 0.28, 0.4)
 
 class PointBall extends Control:
 	var filled := false
@@ -86,33 +95,71 @@ func _build_ui() -> void:
 
 	var center_box := CenterContainer.new()
 	center_box.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	center_box.offset_top = 10
-	center_box.offset_bottom = 85
+	center_box.offset_top = 4
+	center_box.offset_bottom = 92
 	center_box.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	center_box.mouse_filter = MOUSE_FILTER_IGNORE
 	add_child(center_box)
 
 	panel = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(480, 62)
+	panel.custom_minimum_size = Vector2(490, 84)
 	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.2, 0.22, 0.26, 0.4)
-	panel_style.set_border_width_all(0)
+	panel_style.bg_color = Color(0.12, 0.14, 0.18, 0.82)
+	panel_style.set_border_width_all(1)
+	panel_style.border_color = Color(0.25, 0.3, 0.4, 0.5)
 	panel_style.set_corner_radius_all(10)
-	panel_style.content_margin_left = 24
-	panel_style.content_margin_right = 24
-	panel_style.content_margin_top = 8
-	panel_style.content_margin_bottom = 8
+	panel_style.content_margin_left = 20
+	panel_style.content_margin_right = 20
+	panel_style.content_margin_top = 6
+	panel_style.content_margin_bottom = 6
 	panel.add_theme_stylebox_override("panel", panel_style)
 	panel.mouse_filter = MOUSE_FILTER_IGNORE
 	center_box.add_child(panel)
 
+	var panel_vbox := VBoxContainer.new()
+	panel_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	panel_vbox.add_theme_constant_override("separation", 4)
+	panel_vbox.mouse_filter = MOUSE_FILTER_IGNORE
+	panel.add_child(panel_vbox)
+
+	# --- Tier 1: Initiative Ribbon & Round Counter ---
+	var initiative_row := HBoxContainer.new()
+	initiative_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	initiative_row.add_theme_constant_override("separation", 10)
+	initiative_row.mouse_filter = MOUSE_FILTER_IGNORE
+	panel_vbox.add_child(initiative_row)
+
+	round_label = Label.new()
+	round_label.text = "ROUND 1"
+	round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	round_label.add_theme_font_size_override("font_size", 12)
+	round_label.add_theme_color_override("font_color", COLOR_ROUND_TEXT)
+	round_label.add_theme_color_override("font_outline_color", Color(0.06, 0.08, 0.12, 1.0))
+	round_label.add_theme_constant_override("outline_size", 2)
+	round_label.mouse_filter = MOUSE_FILTER_IGNORE
+	initiative_row.add_child(round_label)
+
+	var sep_label := Label.new()
+	sep_label.text = "•"
+	sep_label.add_theme_font_size_override("font_size", 11)
+	sep_label.add_theme_color_override("font_color", Color(0.4, 0.45, 0.55, 0.7))
+	sep_label.mouse_filter = MOUSE_FILTER_IGNORE
+	initiative_row.add_child(sep_label)
+
+	turn_order_row = HBoxContainer.new()
+	turn_order_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	turn_order_row.add_theme_constant_override("separation", 5)
+	turn_order_row.mouse_filter = MOUSE_FILTER_IGNORE
+	initiative_row.add_child(turn_order_row)
+
+	# --- Tier 2: Existing Scoreboard & Capture Zone Status ---
 	var main_row := HBoxContainer.new()
 	main_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	main_row.add_theme_constant_override("separation", 20)
 	main_row.mouse_filter = MOUSE_FILTER_IGNORE
-	panel.add_child(main_row)
+	panel_vbox.add_child(main_row)
 
-	# --- Left Section: Player Team & Points (under name) ---
+	# Left Section: Player Team & Points
 	var player_box := VBoxContainer.new()
 	player_box.custom_minimum_size.x = 80
 	player_box.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -124,7 +171,7 @@ func _build_ui() -> void:
 	player_label.text = "ALLIES"
 	player_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	player_label.add_theme_color_override("font_color", COLOR_PLAYER)
-	player_label.add_theme_font_size_override("font_size", 15)
+	player_label.add_theme_font_size_override("font_size", 14)
 	player_box.add_child(player_label)
 
 	player_points_container = HBoxContainer.new()
@@ -137,11 +184,11 @@ func _build_ui() -> void:
 		player_points_container.add_child(ball)
 	player_box.add_child(player_points_container)
 
-	# --- Center Section: 3-step Capture Progress ---
+	# Center Section: 3-step Capture Progress
 	var center_col := VBoxContainer.new()
 	center_col.custom_minimum_size.x = 230
 	center_col.alignment = BoxContainer.ALIGNMENT_CENTER
-	center_col.add_theme_constant_override("separation", 5)
+	center_col.add_theme_constant_override("separation", 3)
 	center_col.mouse_filter = MOUSE_FILTER_IGNORE
 	main_row.add_child(center_col)
 
@@ -163,19 +210,20 @@ func _build_ui() -> void:
 			progress_row.add_child(line)
 			step_lines.append(line)
 
-		var pip := StepPip.new(20.0)
+		var pip := StepPip.new(18.0)
 		progress_row.add_child(pip)
 		step_nodes.append(pip)
 
 	status_label = Label.new()
 	status_label.text = "ZONE NEUTRAL"
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	status_label.add_theme_font_size_override("font_size", 11)
+	status_label.add_theme_font_size_override("font_size", 10)
 	status_label.add_theme_color_override("font_color", COLOR_NEUTRAL_TEXT)
 	center_col.add_child(status_label)
 
-	# --- Right Section: Enemy Team & Points (under name) ---
+	# Right Section: Enemy Team & Points
 	var enemy_box := VBoxContainer.new()
+	enemy_box.custom_minimum_size.x = 80
 	enemy_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	enemy_box.add_theme_constant_override("separation", 4)
 	enemy_box.mouse_filter = MOUSE_FILTER_IGNORE
@@ -185,7 +233,7 @@ func _build_ui() -> void:
 	enemy_label.text = "ENEMIES"
 	enemy_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	enemy_label.add_theme_color_override("font_color", COLOR_ENEMY)
-	enemy_label.add_theme_font_size_override("font_size", 15)
+	enemy_label.add_theme_font_size_override("font_size", 14)
 	enemy_box.add_child(enemy_label)
 
 	enemy_points_container = HBoxContainer.new()
@@ -198,11 +246,115 @@ func _build_ui() -> void:
 		enemy_points_container.add_child(ball)
 	enemy_box.add_child(enemy_points_container)
 
-func setup(cz: CaptureZoneManager) -> void:
+func setup(cz: CaptureZoneManager, grid_ref: GridField = null) -> void:
 	capture_zone = cz
+	if grid_ref != null:
+		grid = grid_ref
+	elif grid == null:
+		var parent = get_parent()
+		if parent and parent.get_parent() is GridField:
+			grid = parent.get_parent()
 	if not capture_zone.capture_state_changed.is_connected(update_display):
 		capture_zone.capture_state_changed.connect(update_display)
 	update_display()
+	_rebuild_turn_order_ribbon()
+
+func _rebuild_turn_order_ribbon() -> void:
+	if turn_order_row == null:
+		return
+	for child in turn_order_row.get_children():
+		child.queue_free()
+	unit_order_nodes.clear()
+
+	if grid == null or grid.turn_order.is_empty():
+		return
+
+	for i in range(grid.turn_order.size()):
+		var unit: Unit = grid.turn_order[i]
+		if not is_instance_valid(unit):
+			continue
+
+		var icon_panel := PanelContainer.new()
+		icon_panel.custom_minimum_size = Vector2(24, 24)
+		icon_panel.mouse_filter = MOUSE_FILTER_IGNORE
+
+		var border_style := StyleBoxFlat.new()
+		border_style.bg_color = Color(0.06, 0.08, 0.11, 0.95)
+		border_style.set_corner_radius_all(4)
+		var is_ally: bool = unit.side == Unit.Side.PLAYER
+		var team_color: Color = COLOR_PLAYER if is_ally else COLOR_ENEMY
+		border_style.border_color = team_color
+		border_style.set_border_width_all(1)
+		icon_panel.add_theme_stylebox_override("panel", border_style)
+
+		var icon_rect := TextureRect.new()
+		icon_rect.custom_minimum_size = Vector2(24, 24)
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.mouse_filter = MOUSE_FILTER_IGNORE
+		icon_rect.texture = get_idle_frame_texture(unit)
+		icon_panel.add_child(icon_rect)
+
+		turn_order_row.add_child(icon_panel)
+		unit_order_nodes.append({
+			"unit": unit,
+			"index": i,
+			"panel": icon_panel,
+			"border_style": border_style,
+			"icon_rect": icon_rect,
+			"team_color": team_color
+		})
+
+func _process(_delta: float) -> void:
+	if grid == null:
+		var parent = get_parent()
+		if parent and parent.get_parent() is GridField:
+			grid = parent.get_parent()
+
+	if grid == null:
+		return
+
+	# Update Round text
+	if round_label:
+		round_label.text = "ROUND %d" % grid.round_number
+
+	# Check if turn ribbon needs rebuilding
+	if unit_order_nodes.size() != grid.turn_order.size() or unit_order_nodes.is_empty():
+		_rebuild_turn_order_ribbon()
+
+	# Update turn ribbon items
+	for i in range(unit_order_nodes.size()):
+		var slot_data: Dictionary = unit_order_nodes[i]
+		var unit: Unit = slot_data.unit
+		if not is_instance_valid(unit):
+			continue
+
+		if slot_data.icon_rect.texture == null:
+			slot_data.icon_rect.texture = get_idle_frame_texture(unit)
+
+		var is_defeated: bool = unit.is_defeated()
+		var is_active: bool = is_instance_valid(grid.active_unit) and grid.active_unit == unit
+		var turn_spent: bool = (not is_active) and (i < grid.turn_index)
+
+		if is_defeated:
+			slot_data.icon_rect.modulate = Color(0.25, 0.25, 0.25, 0.35)
+			slot_data.border_style.border_color = COLOR_DEFEATED_BORDER
+			slot_data.border_style.set_border_width_all(1)
+		elif is_active:
+			slot_data.icon_rect.modulate = Color.WHITE
+			slot_data.border_style.border_color = COLOR_ACTIVE_BORDER
+			slot_data.border_style.set_border_width_all(2)
+		elif turn_spent:
+			slot_data.icon_rect.modulate = Color(0.55, 0.55, 0.55, 0.5)
+			var dimmed_color: Color = slot_data.team_color
+			dimmed_color.a = 0.4
+			slot_data.border_style.border_color = dimmed_color
+			slot_data.border_style.set_border_width_all(1)
+		else:
+			# Upcoming turn in this round
+			slot_data.icon_rect.modulate = Color.WHITE
+			slot_data.border_style.border_color = slot_data.team_color
+			slot_data.border_style.set_border_width_all(1)
 
 func update_display() -> void:
 	if capture_zone == null:
@@ -245,3 +397,67 @@ func update_display() -> void:
 			line.color = active_color
 		else:
 			line.color = Color(0.3, 0.35, 0.45, 0.5)
+
+var face_texture_cache: Dictionary = {}
+
+func get_face_texture(unit: Unit) -> Texture2D:
+	if not is_instance_valid(unit):
+		return null
+	if face_texture_cache.has(unit) and face_texture_cache[unit] != null:
+		return face_texture_cache[unit]
+
+	var base_tex: Texture2D = null
+	if is_instance_valid(unit.sprite) and unit.sprite.sprite_frames:
+		if unit.sprite.sprite_frames.has_animation("idle"):
+			base_tex = unit.sprite.sprite_frames.get_frame_texture("idle", 0)
+	if base_tex == null and is_instance_valid(unit.data):
+		var sf: SpriteFrames = unit.data.ally_sprite_frames if unit.side == Unit.Side.PLAYER else unit.data.enemy_sprite_frames
+		if sf and sf.has_animation("idle"):
+			base_tex = sf.get_frame_texture("idle", 0)
+
+	if base_tex == null:
+		return null
+
+	if not (base_tex is AtlasTexture):
+		face_texture_cache[unit] = base_tex
+		return base_tex
+
+	var atlas_tex := base_tex as AtlasTexture
+	var root_texture: Texture2D = atlas_tex.atlas
+	var frame_rect: Rect2 = atlas_tex.region
+
+	var unit_name := get_unit_name(unit).to_lower()
+	var face_local_rect := Rect2(65, 50, 64, 64)
+
+	if unit_name.contains("berserker"):
+		face_local_rect = Rect2(95, 230, 180, 180)
+	elif unit_name.contains("quagmire"):
+		face_local_rect = Rect2(100, 255, 175, 175)
+	elif unit_name.contains("breacher"):
+		face_local_rect = Rect2(66, 50, 64, 64)
+	elif unit_name.contains("archer"):
+		face_local_rect = Rect2(64, 50, 64, 64)
+	elif frame_rect.size.y > 300:
+		face_local_rect = Rect2(95, 235, 180, 180)
+	else:
+		face_local_rect = Rect2(frame_rect.size.x * 0.33, frame_rect.size.y * 0.25, frame_rect.size.x * 0.34, frame_rect.size.x * 0.34)
+
+	var face_atlas := AtlasTexture.new()
+	face_atlas.atlas = root_texture
+	face_atlas.region = Rect2(frame_rect.position + face_local_rect.position, face_local_rect.size)
+
+	face_texture_cache[unit] = face_atlas
+	return face_atlas
+
+func get_idle_frame_texture(unit: Unit) -> Texture2D:
+	return get_face_texture(unit)
+
+func get_unit_name(unit: Unit) -> String:
+	if not is_instance_valid(unit) or unit.data == null:
+		return "Unit"
+	if not unit.data.unit_name.is_empty():
+		return unit.data.unit_name
+	var basename := unit.data.resource_path.get_file().get_basename()
+	if not basename.is_empty():
+		return basename
+	return "Unit"
