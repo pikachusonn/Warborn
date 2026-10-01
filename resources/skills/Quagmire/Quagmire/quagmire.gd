@@ -79,6 +79,8 @@ func update_preview(grid_field: GridField, _unit: Unit) -> void:
 		grid_field.target_tiles.append(tile)
 		
 func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
+	if cooldown_remaining > 0:
+		return
 	if not mud_pillar_skill.active_pillars.has(pos):
 		return
 	var zone_tiles := get_zone_tiles(pos)
@@ -86,6 +88,7 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 	clear_pillar_highlights()
 	grid_field.clear_target_tiles()
 	create_quagmire_zone(grid_field, zone_tiles)
+	cooldown_remaining = cooldown
 	grid_field.targeting_skill = false
 	grid_field.clean_up_skill()
 	grid_field.unit_panel.clear_skill_active()
@@ -121,6 +124,8 @@ func remove_aoe_position(grid_field: GridField, position: Vector2i) -> void:
 		grid_field.remove_aoe_effect(self)
 
 func on_owner_turn_start(grid_field: GridField) -> void:
+	if cooldown_remaining > 0:
+		cooldown_remaining -= 1
 	var expired: Array[Dictionary] = []
 	for zone in active_zones:
 		zone["turns"] -= 1

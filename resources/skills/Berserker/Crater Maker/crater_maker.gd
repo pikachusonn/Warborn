@@ -46,6 +46,9 @@ func get_target_tiles(
 
 			if not grid_field.tiles.has(target_position):
 				break
+			# Leap over obstructions, but never land on a unit or movement blocker.
+			if grid_field.is_tile_occupied(target_position, unit):
+				continue
 
 			target_positions.append(target_position)
 
@@ -91,6 +94,9 @@ func on_tile_clicked(
 		return
 
 	if grid_field.tiles[pos] not in grid_field.target_tiles:
+		return
+	# Revalidate at commit time in case the displayed target list is stale.
+	if grid_field.is_tile_occupied(pos, unit):
 		return
 
 	grid_field.targeting_skill = false
