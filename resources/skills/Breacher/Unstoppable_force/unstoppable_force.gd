@@ -27,11 +27,16 @@ func update_preview(
 	)
 
 
+func has_usable_target(_unit: Unit) -> bool:
+	return cooldown_remaining <= 0
+
 func on_tile_clicked(
 	grid_field: GridField,
 	unit: Unit,
 	pos: Vector2i
 ) -> void:
+	if cooldown_remaining > 0:
+		return
 	var direction := grid_field.get_direction_to_mouse(unit.global_position)
 	var distance := grid_field.get_skill_distance(unit)
 
@@ -56,10 +61,15 @@ func on_tile_clicked(
 	)
 
 	await execute(grid_field, unit, target_positions, direction, distance)
+	cooldown_remaining = cooldown
 	grid_field.energy -= 1
 	grid_field.unit_panel.update_energy(grid_field.energy)
 	grid_field.clean_up_skill()
 	grid_field.unit_panel.clear_skill_active()
+
+func on_owner_turn_start(_grid: GridField) -> void:
+	if cooldown_remaining > 0:
+		cooldown_remaining -= 1
 
 
 func cancel(

@@ -7,4 +7,5 @@ script = ExtResource("1_q6oce")
 skill_name = "Odin's Blessing"
 description = "Mark a 3x3 area. After one additional turn, strike at the start of your following turn, damaging enemies. If you are inside, gain a shield equal to 50% of maximum health. Overwritten tiles are excluded."
 damage = 20
+cooldown = 3
 metadata/_custom_type_script = "uid://md3k8nm6gr63"

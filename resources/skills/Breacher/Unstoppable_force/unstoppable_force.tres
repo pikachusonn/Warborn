@@ -8,4 +8,5 @@ skill_name = "Unstoppable Force"
 description = "Charge forward, damaging enemies in your path and knocking them away. Enemies directly ahead are launched beyond your landing position."
 damage = 10
 is_mobile = true
+cooldown = 3
 metadata/_custom_type_script = "uid://wosjab2ra7o2"

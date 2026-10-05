@@ -41,15 +41,23 @@ func run() -> void:
 	assert(quagmire.cooldown_remaining == 0, "Cancelling must not start cooldown")
 	quagmire.begin(grid, quagmire_unit)
 	quagmire.on_tile_clicked(grid, quagmire_unit, Vector2i(7, 7))
-	assert(quagmire.cooldown == 3 and quagmire.cooldown_remaining == 3)
-	assert(not grid.can_use_skill(1))
+	assert(quagmire.cooldown == 2 and quagmire.cooldown_remaining == 0)
+	assert(not grid.can_use_skill(1), "Quagmire cannot be recast while an active zone exists")
 	quagmire.on_tile_clicked(grid, quagmire_unit, Vector2i(8, 7))
-	assert(pillar.active_pillars.has(Vector2i(8, 7)), "Cooldown must prevent consuming another pillar")
-	for remaining in [2, 1, 0]:
-		quagmire.on_owner_turn_start(grid)
-		assert(quagmire.cooldown_remaining == remaining)
-		assert(grid.can_use_skill(1) == (remaining == 0))
-	quagmire.on_owner_turn_start(grid)
+	assert(pillar.active_pillars.has(Vector2i(8, 7)), "Active zone must prevent consuming another pillar")
+	# Zone lasts 3 caster turns
+	quagmire.on_owner_turn_start(grid) # 2 turns left
+	assert(not grid.can_use_skill(1))
+	quagmire.on_owner_turn_start(grid) # 1 turn left
+	assert(not grid.can_use_skill(1))
+	quagmire.on_owner_turn_start(grid) # 0 turns left -> zone clears, cooldown starts (2)
+	assert(quagmire.cooldown_remaining == 2)
+	assert(not grid.can_use_skill(1))
+	quagmire.on_owner_turn_start(grid) # 1 turn remaining
+	assert(quagmire.cooldown_remaining == 1)
+	assert(not grid.can_use_skill(1))
+	quagmire.on_owner_turn_start(grid) # 0 turns remaining -> usable!
 	assert(quagmire.cooldown_remaining == 0)
-	print("PASS: Crater Maker excludes occupied landings; Quagmire cooldown starts on cast and expires after three caster turns")
+	assert(grid.can_use_skill(1))
+	print("PASS: Crater Maker excludes occupied landings; Quagmire cooldown starts 2 turns after zone expires")
 	quit()

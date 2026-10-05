@@ -5,6 +5,8 @@ var mud_pillar_skill: Mud_Pillar
 var hovered_pillar: Vector2i = Vector2i(-1, -1)
 @export var temp_health := 30
 func has_usable_target(unit: Unit) -> bool:
+	if cooldown_remaining > 0:
+		return false
 	for skill in unit.skills:
 		if skill is Mud_Pillar:
 			return not skill.active_pillars.is_empty()
@@ -50,6 +52,8 @@ func get_zone_tiles(center: Vector2i) -> Array[Vector2i]:
 	return result
 
 func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
+	if cooldown_remaining > 0:
+		return
 	if mud_pillar_skill == null:
 		return
 	if not mud_pillar_skill.active_pillars.has(pos):
@@ -59,8 +63,13 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 	mud_pillar_skill.remove_pillar(grid_field, pos)
 	await grid_field.play_skill_presentation(self, target_positions)
 	await execute(grid_field, unit, target_positions, Vector2i.ZERO, 1)
+	cooldown_remaining = cooldown
 	grid_field.clean_up_skill()
 	grid_field.unit_panel.clear_skill_active()
+
+func on_owner_turn_start(_grid: GridField) -> void:
+	if cooldown_remaining > 0:
+		cooldown_remaining -= 1
 
 func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i], _direction: Vector2i, _distance: int) -> void:
 	var all_units = grid_field.player_units + grid_field.enemy_units

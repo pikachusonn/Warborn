@@ -24,6 +24,8 @@ func get_tooltip_damage() -> int:
 	return zone_damage
 
 func has_usable_target(unit: Unit) -> bool:
+	if not active_zones.is_empty() or cooldown_remaining > 0:
+		return false
 	for skill in unit.skills:
 		if skill is Mud_Pillar:
 			return not skill.active_pillars.is_empty()
@@ -79,7 +81,7 @@ func update_preview(grid_field: GridField, _unit: Unit) -> void:
 		grid_field.target_tiles.append(tile)
 		
 func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
-	if cooldown_remaining > 0:
+	if cooldown_remaining > 0 or not active_zones.is_empty():
 		return
 	if not mud_pillar_skill.active_pillars.has(pos):
 		return
@@ -88,7 +90,6 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 	clear_pillar_highlights()
 	grid_field.clear_target_tiles()
 	create_quagmire_zone(grid_field, zone_tiles)
-	cooldown_remaining = cooldown
 	grid_field.targeting_skill = false
 	grid_field.clean_up_skill()
 	grid_field.unit_panel.clear_skill_active()
@@ -122,10 +123,11 @@ func remove_aoe_position(grid_field: GridField, position: Vector2i) -> void:
 		grid_field.tiles[position].clear_quagmire()
 	if active_zones.is_empty():
 		grid_field.remove_aoe_effect(self)
+		if not empty_zones.is_empty():
+			cooldown_remaining = cooldown
 
 func on_owner_turn_start(grid_field: GridField) -> void:
-	if cooldown_remaining > 0:
-		cooldown_remaining -= 1
+	var had_active_zones := not active_zones.is_empty()
 	var expired: Array[Dictionary] = []
 	for zone in active_zones:
 		zone["turns"] -= 1
@@ -133,6 +135,9 @@ func on_owner_turn_start(grid_field: GridField) -> void:
 			expired.append(zone)
 	for zone in expired:
 		clear_zone(grid_field, zone)
+		cooldown_remaining = cooldown
+	if not had_active_zones and cooldown_remaining > 0:
+		cooldown_remaining -= 1
 			
 func clear_zone(grid_field: GridField, zone: Dictionary) -> void:
 	active_zones.erase(zone)
