@@ -12,7 +12,7 @@
 [resource]
 script = ExtResource("3_x3f4j")
 mobility = 2
-speed = 2
+speed = 3
 ally_sprite_frames = ExtResource("1_tb2nm")
 enemy_sprite_frames = ExtResource("2_dt6tw")
 skill1_name = "Helmet Splitter"

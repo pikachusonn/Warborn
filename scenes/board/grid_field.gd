@@ -6,6 +6,20 @@ class_name GridField
 const WIDTH := 10
 const HEIGHT := 10
 const TILE_SIZE := 64
+
+static func is_mobile() -> bool:
+	return OS.has_feature("mobile") or OS.get_name() in ["Android", "iOS"] or DisplayServer.is_touchscreen_available()
+
+func show_mobile_skill_tooltip(skill: Skill, display_name: String) -> void:
+	var wheel = radial_menu.get_node_or_null("WheelBackGround")
+	if is_instance_valid(wheel):
+		wheel.show_sidebar_tooltip(skill, display_name)
+
+func hide_mobile_skill_tooltip() -> void:
+	var wheel = radial_menu.get_node_or_null("WheelBackGround")
+	if is_instance_valid(wheel):
+		wheel.hide_sidebar_tooltip()
+
 var tiles: Dictionary[Vector2i, TileScene] = {}
 var hovered_tile: TileScene
 var target_tiles: Array[TileScene] = []
@@ -31,6 +45,7 @@ enum Turn {
 }
 var turn_order: Array[Unit] = []
 var turn_index := 0
+var round_number := 1
 var active_unit: Unit
 var energy := 0
 var free_movement := false
@@ -38,6 +53,8 @@ var resolving_turn_start := false
 var presenting_skill := false
 var radial_skills_open := false
 var radial_menu_owner: Unit
+var network_handler_busy := false
+var remote_skill_availability: Array[bool] = []
 # ================================
 # SKILLS / TARGETING
 # ================================
@@ -54,6 +71,11 @@ var active_aoe_effects: Array = []
 var aoe_tile_owners: Dictionary = {}
 var aoe_hover_glow: Node2D
 var suppressed_aoe_hover_tiles: Array[Vector2i] = []
+const LONG_TOUCH_DURATION := 0.25
+var mobile_touch_active := false
+var mobile_touch_start_time := 0.0
+var mobile_touch_screen_pos := Vector2.ZERO
+var is_long_touching_aoe := false
 
 enum Action {
 	MOVE,
@@ -67,6 +89,15 @@ enum Action {
 # UI
 # ================================
 var hovered_unit: Unit
+var capture_zone: CaptureZoneManager
+var match_ended := false
+var winning_team: int = -1
+var win_reason: String = ""
+var top_capture_hud: TopCaptureHUD = null
+var match_end_modal: MatchEndModal = null
+var team_health_hud: TeamHealthHUD = null
+
+@onready var netplay: Node = get_node("/root/Netplay")
 @onready var unit_panel: UnitPanel = $CanvasLayer/BottomHUD
 @onready var skill_cutscene: Control = $CanvasLayer/SkillCutscene
 @onready var radial_menu: Node2D = $RadialActionMenu
@@ -119,23 +150,50 @@ func _ready() -> void:
 		}
 	]
 	generate_grid()
+	capture_zone = preload("res://scenes/board/capture_zone_manager.gd").new()
+	capture_zone.name = "CaptureZoneManager"
+	add_child(capture_zone)
+	capture_zone.setup(self)
+
+	top_capture_hud = $CanvasLayer.get_node_or_null("TopCaptureHUD") as TopCaptureHUD
+	if top_capture_hud:
+		top_capture_hud.setup(capture_zone, self)
+
+	match_end_modal = $CanvasLayer.get_node_or_null("MatchEndModal") as MatchEndModal
+
 	spawn_team(players_characters)
 	spawn_team(enemies_characters)
 	update_unit_visuals()
+
+	team_health_hud = $CanvasLayer.get_node_or_null("TeamHealthHUD") as TeamHealthHUD
+	if not team_health_hud and has_node("CanvasLayer"):
+		team_health_hud = preload("res://scenes/board/team_health_hud.gd").new()
+		team_health_hud.name = "TeamHealthHUD"
+		$CanvasLayer.add_child(team_health_hud)
+	if team_health_hud:
+		team_health_hud.setup(self)
+
 	unit_panel.move_pressed.connect(handle_move_pressed)
 	unit_panel.skill1_pressed.connect(handle_skill_pressed.bind(0, Action.SKILL1))
 	unit_panel.skill2_pressed.connect(handle_skill_pressed.bind(1, Action.SKILL2))
 	unit_panel.skill3_pressed.connect(handle_skill_pressed.bind(2, Action.SKILL3))
 	unit_panel.skill4_pressed.connect(handle_skill_pressed.bind(3, Action.SKILL4))
-	unit_panel.end_turn_pressed.connect(end_turn)
+	unit_panel.capture_pressed.connect(handle_radial_capture)
+	unit_panel.end_turn_pressed.connect(handle_radial_end_turn)
 	radial_menu.get_node("WheelBackGround").end_turn_pressed.connect(handle_radial_end_turn)
 	radial_menu.get_node("WheelBackGround").move_pressed.connect(handle_radial_move)
 	radial_menu.get_node("WheelBackGround").action_pressed.connect(open_radial_skills)
 	radial_menu.get_node("WheelBackGround").skill_pressed.connect(select_radial_skill)
+	radial_menu.get_node("WheelBackGround").capture_pressed.connect(handle_radial_capture)
 	radial_menu.get_node("MoveCancel").cancel_pressed.connect(cancel_radial_movement)
-	start_combat()
+	if netplay.is_networked():
+		netplay.attach_board(self)
+	else:
+		start_combat()
 
 func open_radial_skills() -> void:
+	if netplay.intercept("skills"):
+		return
 	if resolving_turn_start or not is_instance_valid(active_unit):
 		return
 	if active_skill != null:
@@ -144,6 +202,8 @@ func open_radial_skills() -> void:
 	update_radial_menu()
 
 func select_radial_skill(index: int) -> void:
+	if netplay.intercept("skill", index):
+		return
 	if resolving_turn_start or not is_instance_valid(active_unit):
 		return
 	if not can_use_skill(index):
@@ -154,6 +214,8 @@ func select_radial_skill(index: int) -> void:
 	update_radial_menu()
 
 func can_use_skill(index: int) -> bool:
+	if netplay.is_client():
+		return index >= 0 and index < remote_skill_availability.size() and remote_skill_availability[index]
 	if not is_instance_valid(active_unit) or index < 0 or index >= active_unit.skills.size():
 		return false
 	var skill: Skill = active_unit.skills[index]
@@ -164,12 +226,16 @@ func can_use_skill(index: int) -> bool:
 		and (not skill.is_mobile or not are_mobility_skills_blocked(active_unit))
 
 func has_usable_skill() -> bool:
+	if not is_instance_valid(active_unit) or active_unit.is_defeated():
+		return false
 	for index in range(active_unit.skills.size()):
 		if can_use_skill(index):
 			return true
 	return false
 
 func cancel_radial_movement() -> void:
+	if netplay.intercept("cancel"):
+		return
 	if resolving_turn_start:
 		return
 	if active_skill != null and not targeting_skill:
@@ -187,6 +253,8 @@ func cancel_radial_movement() -> void:
 	update_radial_menu()
 
 func handle_radial_move() -> void:
+	if netplay.intercept("move"):
+		return
 	if resolving_turn_start or not is_instance_valid(active_unit):
 		return
 	if active_unit.is_defeated() or (energy <= 0 and not free_movement):
@@ -201,6 +269,8 @@ func handle_radial_move() -> void:
 	handle_move_pressed()
 
 func handle_radial_end_turn() -> void:
+	if netplay.intercept("end"):
+		return
 	if resolving_turn_start or not is_instance_valid(active_unit):
 		return
 	# Don't interrupt a skill that is already playing its attack presentation.
@@ -217,12 +287,116 @@ func update_board_layout() -> void:
 	var viewport_size := get_viewport_rect().size
 	var board_size := viewport_size.y * 0.80
 	scale = Vector2.ONE * board_size / (HEIGHT * TILE_SIZE)
-	# Leave 11% above the board and 9% below.
-	position = Vector2((viewport_size.x - board_size) / 2.0, viewport_size.y * 0.11)
+	# Leave 13.5% above the board to give comfortable breathing room below the scoreboard.
+	position = Vector2((viewport_size.x - board_size) / 2.0, viewport_size.y * 0.135)
+	# Both peers retain the same logical coordinates. Only the guest's view rotates.
+	rotation = PI if netplay.is_client() else 0.0
+	if netplay.is_client():
+		position += Vector2.ONE * board_size
+	for child in get_children():
+		if child is Unit or child == radial_menu:
+			child.rotation = -rotation
+
+func has_aoe_at(grid_pos: Vector2i) -> bool:
+	if not tiles.has(grid_pos):
+		return false
+	if netplay.is_client() and netplay.state_codec != null:
+		return not netplay.state_codec.get_replica_zone_tiles(grid_pos).is_empty()
+	var effect = aoe_tile_owners.get(grid_pos)
+	return effect != null and effect in active_aoe_effects
+
+func _update_mobile_long_touch() -> void:
+	if not mobile_touch_active:
+		if is_long_touching_aoe:
+			is_long_touching_aoe = false
+			clear_hover()
+		return
+	var local_pos := to_local(mobile_touch_screen_pos)
+	var grid_pos := Vector2i(floori(local_pos.x / TILE_SIZE), floori(local_pos.y / TILE_SIZE))
+	if not is_long_touching_aoe:
+		var elapsed := (Time.get_ticks_msec() / 1000.0) - mobile_touch_start_time
+		if elapsed >= LONG_TOUCH_DURATION and has_aoe_at(grid_pos):
+			is_long_touching_aoe = true
+	else:
+		if not has_aoe_at(grid_pos):
+			is_long_touching_aoe = false
+			clear_hover()
+
+func _input(event: InputEvent) -> void:
+	if not is_mobile():
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			mobile_touch_active = true
+			mobile_touch_start_time = Time.get_ticks_msec() / 1000.0
+			mobile_touch_screen_pos = get_canvas_transform().affine_inverse() * event.position
+			is_long_touching_aoe = false
+		else:
+			mobile_touch_active = false
+			if is_long_touching_aoe:
+				is_long_touching_aoe = false
+				clear_hover()
+	elif event is InputEventScreenDrag:
+		mobile_touch_screen_pos = get_canvas_transform().affine_inverse() * event.position
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed:
+			if not mobile_touch_active:
+				mobile_touch_active = true
+				mobile_touch_start_time = Time.get_ticks_msec() / 1000.0
+				mobile_touch_screen_pos = get_canvas_transform().affine_inverse() * event.position
+				is_long_touching_aoe = false
+		else:
+			mobile_touch_active = false
+			if is_long_touching_aoe:
+				is_long_touching_aoe = false
+				clear_hover()
+	elif event is InputEventMouseMotion and mobile_touch_active:
+		mobile_touch_screen_pos = get_canvas_transform().affine_inverse() * event.position
 
 func _process(_delta: float) -> void:
+	if is_mobile():
+		_update_mobile_long_touch()
 	update_radial_menu()
-	var mouse_pos = get_global_mouse_position()
+	if netplay.is_networked():
+		var enabled: bool = netplay.can_input()
+		unit_panel.move_button.disabled = not enabled or (energy <= 0 and not free_movement)
+		unit_panel.end_turn_button.disabled = not enabled
+		var buttons := [unit_panel.skill1_button, unit_panel.skill2_button, unit_panel.skill3_button, unit_panel.skill4_button]
+		for index in buttons.size():
+			buttons[index].disabled = not enabled or not can_use_skill(index)
+		if is_instance_valid(unit_panel.capture_button):
+			var in_zone := capture_zone.is_inside_capture_zone(active_unit.grid_position) if is_instance_valid(active_unit) else false
+			var can_cap := capture_zone.can_unit_capture(active_unit) if is_instance_valid(active_unit) else false
+			unit_panel.capture_button.visible = in_zone
+			unit_panel.capture_button.disabled = not enabled or not can_cap
+	else:
+		if is_instance_valid(unit_panel.capture_button):
+			var in_zone := capture_zone.is_inside_capture_zone(active_unit.grid_position) if is_instance_valid(active_unit) else false
+			var can_cap := capture_zone.can_unit_capture(active_unit) if is_instance_valid(active_unit) else false
+			unit_panel.capture_button.visible = in_zone
+			unit_panel.capture_button.disabled = not can_cap
+	if netplay.is_client():
+		if netplay.state_codec != null:
+			netplay.state_codec.update_health_display()
+		update_local_hover()
+		return
+	if netplay.is_networked() and not netplay.owns_turn():
+		update_local_hover()
+		return
+	refresh_target_preview()
+
+func is_sharing_target_preview() -> bool:
+	return targeting_skill or current_action == Action.MOVE
+
+func get_target_mouse_position() -> Vector2:
+	if netplay.is_networked() and (netplay.dispatching or netplay.executing_command or not netplay.owns_turn()):
+		return to_global(netplay.pointer)
+	if is_mobile() and mobile_touch_active:
+		return mobile_touch_screen_pos
+	return get_global_mouse_position()
+
+func refresh_target_preview() -> void:
+	var mouse_pos := get_target_mouse_position()
 	var local_mouse = to_local(mouse_pos)
 	var grid_pos = Vector2i(floori(local_mouse.x / TILE_SIZE), floori(local_mouse.y / TILE_SIZE))
 	if not tiles.has(grid_pos):
@@ -235,17 +409,44 @@ func _process(_delta: float) -> void:
 			active_skill.update_preview(self, active_unit)
 		update_health_previews()
 		return
+	var tile = tiles[grid_pos]
+	# Update the hovered tile before skills such as Crater Maker read it.
+	if tile != hovered_tile:
+		clear_hover()
+		hovered_tile = tile
+		hovered_tile.set_hovered(true)
+		update_hovered_unit(tile)
 	if active_skill and active_unit and targeting_skill:
 		active_skill.update_preview(self, active_unit)
 	update_health_previews()
-	var tile = tiles[grid_pos]
-	if tile == hovered_tile:
-		update_aoe_hover(grid_pos)
+	update_aoe_hover(grid_pos)
+
+func refresh_remote_target_preview(cursor: Vector2) -> void:
+	# Remote aim affects authoritative target/impact data, but never the host's
+	# private tile, character, zone, or cloud hover.
+	var previous_hovered_tile = hovered_tile
+	var grid_pos := Vector2i(floori(cursor.x / TILE_SIZE), floori(cursor.y / TILE_SIZE))
+	hovered_tile = tiles.get(grid_pos)
+	if targeting_skill and active_skill and active_unit:
+		active_skill.update_preview(self, active_unit)
+	update_health_previews()
+	hovered_tile = previous_hovered_tile
+
+func update_local_hover() -> void:
+	var local_mouse := to_local(get_target_mouse_position())
+	var grid_pos := Vector2i(floori(local_mouse.x / TILE_SIZE), floori(local_mouse.y / TILE_SIZE))
+	if not tiles.has(grid_pos):
+		clear_hover()
+		if hovered_unit:
+			hovered_unit.set_hovered(false)
+			hovered_unit = null
 		return
-	clear_hover()
-	hovered_tile = tile
-	hovered_tile.set_hovered(true)
-	update_hovered_unit(tile)
+	var tile: TileScene = tiles[grid_pos]
+	if tile != hovered_tile:
+		clear_hover()
+		hovered_tile = tile
+		hovered_tile.set_hovered(true)
+		update_hovered_unit(tile)
 	update_aoe_hover(grid_pos)
 
 func clear_hover() -> void:
@@ -260,6 +461,7 @@ func clear_hover() -> void:
 		hovered_tile = null
 
 func update_radial_menu() -> void:
+	radial_menu.modulate = Color(0.55, 0.55, 0.55, 0.5) if netplay.is_networked() and not netplay.owns_turn() else Color.WHITE
 	if radial_menu_owner != active_unit:
 		radial_skills_open = false
 		radial_menu_owner = active_unit
@@ -268,7 +470,7 @@ func update_radial_menu() -> void:
 	var cancel_visible := (moving or radial_skills_open or targeting_skill) and not presenting_skill and not skill_resolving
 	for unit in player_units + enemy_units:
 		unit.set_move_targeting(cancel_visible and unit == active_unit)
-	if not is_instance_valid(active_unit):
+	if not is_instance_valid(active_unit) or match_ended:
 		radial_menu.hide()
 		return
 	if active_unit.is_defeated():
@@ -282,14 +484,22 @@ func update_radial_menu() -> void:
 	resources.set_resources(energy > 0, free_movement)
 	var wheel = radial_menu.get_node("WheelBackGround")
 	wheel.set_skills_mode(radial_skills_open)
+	var in_zone := capture_zone.is_inside_capture_zone(active_unit.grid_position) if (is_instance_valid(active_unit) and capture_zone != null) else false
+	var can_cap := capture_zone.can_unit_capture(active_unit) if (is_instance_valid(active_unit) and capture_zone != null) else false
+	wheel.set_capture_mode(in_zone, can_cap)
 	var availability: Array[bool] = []
 	if radial_skills_open:
 		for index in range(4):
 			availability.append(can_use_skill(index))
 	wheel.set_skill_availability(availability)
 	wheel.visible = not moving and not targeting_skill and not presenting_skill and not skill_resolving
-	for node_name in ["Action", "Move", "EndTurn"]:
-		radial_menu.get_node(node_name).visible = wheel.visible and not radial_skills_open
+	for node_name in ["Action", "Move", "EndTurn", "Capture"]:
+		var btn = radial_menu.get_node_or_null(node_name)
+		if btn:
+			var should_show = wheel.visible and not radial_skills_open
+			if node_name == "Capture":
+				should_show = should_show and in_zone
+			btn.visible = should_show
 
 func update_health_previews() -> void:
 	var preview_positions: Array[Vector2i] = []
@@ -307,6 +517,14 @@ func update_health_previews() -> void:
 		unit.show_health_preview(preview_damage, preview_healing)
 
 func update_aoe_hover(position: Vector2i) -> void:
+	if is_mobile() and not is_long_touching_aoe:
+		update_zone_cloud_hover([])
+		if is_instance_valid(aoe_hover_glow):
+			for previous_position in aoe_hover_glow.positions:
+				if tiles.has(previous_position):
+					tiles[previous_position].set_aoe_hovered(false)
+			aoe_hover_glow.set_tiles([])
+		return
 	var highlighted: Array[Vector2i] = []
 	var effect = aoe_tile_owners.get(position)
 	if position not in suppressed_aoe_hover_tiles:
@@ -320,10 +538,15 @@ func update_aoe_hover(position: Vector2i) -> void:
 		for candidate in candidates:
 			if tiles.has(candidate) and aoe_tile_owners.get(candidate) == effect:
 				highlighted.append(candidate)
-	if targeting_skill or current_action == Action.MOVE:
+	elif netplay.is_client() and netplay.state_codec != null:
+		highlighted.assign(netplay.state_codec.get_replica_zone_tiles(position))
+	var local_targeting: bool = (not netplay.is_networked() or netplay.owns_turn()) and (targeting_skill or current_action == Action.MOVE)
+	if local_targeting:
 		# Remember the entire zone until the cursor leaves, even after targeting ends.
 		suppressed_aoe_hover_tiles.assign(highlighted)
 		highlighted.clear()
+	elif is_mobile():
+		suppressed_aoe_hover_tiles.clear()
 	elif position in suppressed_aoe_hover_tiles:
 		highlighted.clear()
 	update_zone_cloud_hover(highlighted)
@@ -344,10 +567,17 @@ func update_aoe_hover(position: Vector2i) -> void:
 	aoe_hover_glow.set_tiles(highlighted, color)
 
 func suppress_aoe_hover(positions: Array[Vector2i]) -> void:
+	if is_mobile():
+		suppressed_aoe_hover_tiles.clear()
+		clear_hover()
+		return
 	suppressed_aoe_hover_tiles.assign(positions)
 	clear_hover()
 
 func update_zone_cloud_hover(positions: Array[Vector2i]) -> void:
+	if netplay.is_client() and netplay.state_codec != null:
+		netplay.state_codec.set_replica_zone_hover(positions)
+		return
 	for effect in active_aoe_effects:
 		if effect.has_method("set_zone_hover"):
 			effect.set_zone_hover(positions)
@@ -377,14 +607,18 @@ func update_hovered_unit(tile: TileScene):
 	
 func spawn_character(data: UnitData, pos: Vector2i, side: Unit.Side):
 	var unit_instance: Unit = unit_scene.instantiate()
+	unit_instance.network_id = player_units.size() + enemy_units.size()
 	add_child(unit_instance)
 	unit_instance.setup(
 		pos,
 		data,
 		side
 	)
+	unit_instance.rotation = -rotation
 	unit_instance.play_spawn_effect()
 	unit_instance.click_area.unit_clicked.connect(handle_unit_clicked)
+	unit_instance.position_changed.connect(capture_zone.on_unit_position_changed)
+	unit_instance.defeated.connect(capture_zone.on_unit_defeated)
 	if side == Unit.Side.PLAYER:
 		player_units.append(unit_instance)
 	else:
@@ -398,7 +632,7 @@ func spawn_team(team):
 		spawn_character(data, pos, side)
 		
 func get_mouse_grid_position() -> Vector2i:
-	var mouse_position := to_local(get_global_mouse_position())
+	var mouse_position := to_local(get_target_mouse_position())
 	return Vector2i(floori(mouse_position.x / 64.0), floori(mouse_position.y / 64.0))
 	
 func clear_impact_preview() -> void:
@@ -444,6 +678,8 @@ func move_unit(unit: Unit, target_pos: Vector2i):
 		end_turn()
 		
 func end_turn():
+	if netplay.is_client():
+		return
 	if resolving_turn_start:
 		return
 	clear_skill_state()
@@ -461,11 +697,17 @@ func advance_to_next_living_unit() -> bool:
 	for offset in range(1, turn_order.size() + 1):
 		var candidate_index := (turn_index + offset) % turn_order.size()
 		if not turn_order[candidate_index].is_defeated():
+			if candidate_index <= turn_index:
+				round_number += 1
 			turn_index = candidate_index
 			return true
 	return false
 	
 func handle_unit_clicked(unit: Unit):
+	# Unit selection must never replace the initiative owner in network play.
+	# Target clicks are handled by the tile below the unit, as in local targeting.
+	if netplay.is_networked():
+		return
 	if resolving_turn_start:
 		return
 	if(targeting_skill):
@@ -480,6 +722,10 @@ func handle_unit_clicked(unit: Unit):
 	active_unit.set_selected(true)
 	
 func handle_tile_clicked(pos: Vector2i):
+	if netplay.intercept("tile", -1, pos):
+		return
+	if not tiles.has(pos):
+		return
 	if resolving_turn_start:
 		return
 	if(active_unit == null):
@@ -496,7 +742,7 @@ func handle_tile_clicked(pos: Vector2i):
 			unit_panel.clear_skill_active()
 		_:
 			if active_skill:
-				active_skill.on_tile_clicked(self, active_unit, pos)
+				await active_skill.on_tile_clicked(self, active_unit, pos)
 	
 func update_unit_visuals():
 	for unit in turn_order:
@@ -515,10 +761,14 @@ func clean_up_skill(retain = false):
 	clear_move_range()
 	clear_skill_state()
 	active_skill = null
-	if energy == 0 && !free_movement && !retain:
-		end_turn()
+	if not has_usable_skill():
+		radial_skills_open = false
+		if free_movement or retain:
+			update_radial_menu()
+		else:
+			end_turn()
 	else:
-		radial_skills_open = has_usable_skill()
+		radial_skills_open = true
 		update_radial_menu()
 
 func clear_target_tiles():
@@ -528,6 +778,7 @@ func clear_target_tiles():
 	target_tiles.clear()
 
 func clear_skill_state():
+	hide_mobile_skill_tooltip()
 	clear_impact_preview()
 	clear_target_tiles()
 	targeting_skill = false
@@ -591,17 +842,24 @@ func show_affected_tiles(target_positions: Array[Vector2i]):
 		tiles[target].set_attack_warning()
 	
 func handle_move_pressed(is_skill = false): 
+	if not is_skill and netplay.intercept("move"):
+		return
 	if resolving_turn_start:
 		return
 	if active_unit == null:
 		return
 	if not is_skill:
-		clean_up_skill()
+		if active_skill != null:
+			active_skill.cancel(self, active_unit)
+			active_skill = null
+		clear_skill_state()
 	clear_move_range()
 	current_action = Action.MOVE
 	calculate_move_range(active_unit)
 
 func handle_skill_pressed(skill_number: int, action: Action):
+	if netplay.intercept("skill", skill_number):
+		return
 	if resolving_turn_start:
 		return
 	if active_unit == null:
@@ -620,9 +878,13 @@ func handle_skill_pressed(skill_number: int, action: Action):
 	active_skill = skill
 	current_action = action
 	active_skill.begin(self, active_unit)
+	if is_mobile() and targeting_skill:
+		var names := [active_unit.data.skill1_name, active_unit.data.skill2_name, active_unit.data.skill3_name, active_unit.data.skill4_name]
+		var display_name: String = names[skill_number] if skill_number < names.size() else skill.skill_name
+		show_mobile_skill_tooltip(skill, display_name)
 			
 func get_direction_to_mouse(position: Vector2, diagonal = false) -> Vector2i:
-	var mouse_pos := get_global_mouse_position()
+	var mouse_pos := get_target_mouse_position()
 	var delta := mouse_pos - position
 	# Normal 4-direction aiming
 	if not diagonal:
@@ -651,7 +913,7 @@ func get_direction_to_mouse(position: Vector2, diagonal = false) -> Vector2i:
 		return Vector2i(1, -1)
 
 func get_skill_distance(unit: Unit) -> int:
-	var mouse_pos := get_global_mouse_position()
+	var mouse_pos := get_target_mouse_position()
 	var unit_pos := unit.global_position
 	var delta := to_local(mouse_pos) - to_local(unit_pos)
 	var tile_distance = max(abs(delta.x), abs(delta.y)) / TILE_SIZE
@@ -679,6 +941,10 @@ func play_skill_presentation(
 	skill: Skill,
 	target_positions: Array[Vector2i]
 ) -> void:
+	if netplay.is_networked() and not netplay.is_client():
+		var texture_path := skill.cutscene_texture.resource_path if skill.cutscene_texture else ""
+		var video_path := skill.cutscene_video.resource_path if skill.cutscene_video else ""
+		netplay.broadcast_skill_presentation(skill.skill_name, target_positions, texture_path, video_path)
 	presenting_skill = true
 	update_radial_menu()
 	show_locked_tiles(target_positions)
@@ -694,6 +960,41 @@ func play_skill_presentation(
 	skill_cutscene.hide()
 	show_affected_tiles(target_positions)
 	await get_tree().create_timer(0.5).timeout
+	for target in target_positions:
+		if tiles.has(target):
+			tiles[target].clear_attack()
+	presenting_skill = false
+	update_radial_menu()
+
+func play_skill_presentation_from_network(
+	_skill_name: String,
+	target_positions: Array[Vector2i],
+	texture_path: String,
+	video_path: String
+) -> void:
+	presenting_skill = true
+	update_radial_menu()
+	show_locked_tiles(target_positions)
+	await get_tree().create_timer(0.5).timeout
+	if not texture_path.is_empty() and ResourceLoader.exists(texture_path):
+		var tex = load(texture_path)
+		if tex is Texture2D:
+			show_skill_cutscene(tex)
+			await get_tree().create_timer(1.0).timeout
+	if not video_path.is_empty() and ResourceLoader.exists(video_path):
+		var vid = load(video_path)
+		if vid is VideoStream:
+			var cutscene_player = show_skill_cutscene_video(vid)
+			await get_tree().create_timer(3.0).timeout
+			cutscene_player.stop()
+			cutscene_player.stream = null
+	skill_cutscene.hide()
+	show_affected_tiles(target_positions)
+	await get_tree().create_timer(0.5).timeout
+	for target in target_positions:
+		if tiles.has(target):
+			tiles[target].clear_attack()
+	clear_target_tiles()
 	presenting_skill = false
 	update_radial_menu()
 	
@@ -711,8 +1012,13 @@ func initialize_turn_order():
 			return a.data.speed > b.data.speed
 	)
 	turn_index = 0
+	round_number = 1
 
 func start_unit_turn(unit: Unit):
+	if netplay.is_client():
+		return
+	if netplay.is_networked():
+		netplay.turn_epoch += 1
 	if unit.is_defeated():
 		if advance_to_next_living_unit():
 			start_unit_turn(turn_order[turn_index])
@@ -722,7 +1028,10 @@ func start_unit_turn(unit: Unit):
 	active_unit.clear_temp_health()
 	for skill in unit.skills:
 		await skill.on_owner_turn_start(self)
+	capture_zone.on_unit_turn_start(unit)
 	resolving_turn_start = false
+	if match_ended:
+		return
 	if unit.is_defeated():
 		end_turn()
 		return
@@ -730,7 +1039,9 @@ func start_unit_turn(unit: Unit):
 	if unit.get_status_stacks(Unit.EFFECTS.STUNNED) > 0:
 		unit.remove_status(Unit.EFFECTS.STUNNED)
 		unit.shake()
+		resolving_turn_start = true
 		await get_tree().create_timer(0.5).timeout
+		resolving_turn_start = false
 		end_turn()
 		return
 		
@@ -845,3 +1156,82 @@ func are_mobility_skills_blocked(unit: Unit) -> bool:
 		if effect.has_method("blocks_mobility_skills") && effect.blocks_mobility_skills(unit):
 			return true
 	return false
+
+func handle_radial_capture() -> void:
+	if netplay.intercept("capture"):
+		return
+	if resolving_turn_start or not is_instance_valid(active_unit) or match_ended:
+		return
+	if not capture_zone.can_unit_capture(active_unit):
+		return
+	capture_zone.start_capture(active_unit)
+	update_radial_menu()
+
+func end_match(winner: int, reason: String) -> void:
+	if match_ended:
+		return
+	match_ended = true
+	winning_team = winner
+	win_reason = reason
+	clear_skill_state()
+	if active_unit:
+		active_unit.set_selected(false)
+	update_radial_menu()
+	if netplay.is_networked():
+		netplay.send_snapshot()
+	var local_side := Unit.Side.PLAYER if not netplay.is_client() else Unit.Side.ENEMY
+	if is_instance_valid(match_end_modal):
+		match_end_modal.show_match_end(
+			winner,
+			reason,
+			local_side,
+			capture_zone.team_capture_points.get(Unit.Side.PLAYER, 0),
+			capture_zone.team_capture_points.get(Unit.Side.ENEMY, 0)
+		)
+
+func check_elimination_victory() -> void:
+	if match_ended:
+		return
+	var player_alive := not get_living_units(Unit.Side.PLAYER).is_empty()
+	var enemy_alive := not get_living_units(Unit.Side.ENEMY).is_empty()
+	if not player_alive and not enemy_alive:
+		end_match(-1, "Elimination")
+	elif not enemy_alive:
+		end_match(Unit.Side.PLAYER, "Elimination")
+	elif not player_alive:
+		end_match(Unit.Side.ENEMY, "Elimination")
+
+func get_living_units(side: Unit.Side) -> Array[Unit]:
+	var units := player_units if side == Unit.Side.PLAYER else enemy_units
+	var living: Array[Unit] = []
+	for unit in units:
+		if not unit.is_defeated():
+			living.append(unit)
+	return living
+
+func network_command_allowed(action: String, argument: int) -> bool:
+	if match_ended:
+		return false
+	if not is_instance_valid(active_unit) or active_unit.is_defeated() or resolving_turn_start or presenting_skill or network_handler_busy:
+		return false
+	if active_skill != null and not targeting_skill:
+		return false
+	match action:
+		"skills", "cancel", "end": return true
+		"move": return free_movement or energy > 0
+		"skill": return can_use_skill(argument)
+		"tile": return current_action == Action.MOVE or active_skill != null
+		"capture": return capture_zone.can_unit_capture(active_unit)
+	return false
+
+func execute_network_command(action: String, argument: int, tile: Vector2i) -> void:
+	network_handler_busy = true
+	match action:
+		"skills": open_radial_skills()
+		"cancel": cancel_radial_movement()
+		"end": handle_radial_end_turn()
+		"move": handle_radial_move()
+		"skill": select_radial_skill(argument)
+		"tile": await handle_tile_clicked(tile)
+		"capture": handle_radial_capture()
+	network_handler_busy = false

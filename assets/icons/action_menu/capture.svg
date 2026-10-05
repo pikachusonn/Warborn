@@ -1,0 +1,16 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <!-- Flag pole with shadow/outline -->
+  <path d="M 72 48 L 72 208" stroke="#151C33" stroke-width="16" stroke-linecap="round"/>
+  <path d="M 72 48 L 72 208" stroke="#9AAEC7" stroke-width="8" stroke-linecap="round"/>
+  <!-- Finial ball -->
+  <circle cx="72" cy="46" r="14" fill="#151C33"/>
+  <circle cx="72" cy="46" r="9" fill="#FFD043"/>
+  <circle cx="69" cy="43" r="3" fill="#FFF6D1"/>
+  <!-- Flag banner (swallowtail) -->
+  <path d="M 78 58 L 194 76 L 166 99 L 194 122 L 78 140 Z" fill="#151C33" stroke="#151C33" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M 78 58 L 194 76 L 166 99 L 194 122 L 78 140 Z" fill="#3898EC" stroke="#266EB2" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Inner highlight -->
+  <path d="M 80 66 L 180 80 L 158 99 L 80 128 Z" fill="#5EAEFF"/>
+  <!-- Crown emblem -->
+  <path d="M 100 86 L 108 97 L 120 82 L 132 97 L 140 86 L 136 104 L 104 104 Z" fill="#FFD043" stroke="#151C33" stroke-width="3" stroke-linejoin="round"/>
+</svg>

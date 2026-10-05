@@ -6,9 +6,13 @@ const TARGET_RADIUS: int = 2
 @export_range(0.0, 1.0) var shield_fraction: float = 0.5
 var owner: Unit
 var active_zones: Array[Dictionary] = []
+var next_zone_id := 1
+
+func has_usable_target(_unit: Unit) -> bool:
+	return active_zones.is_empty() and cooldown_remaining <= 0
 
 func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
-	if grid_field.energy <= 0 or pos not in get_target_tiles(grid_field, unit, Vector2i.ZERO):
+	if grid_field.energy <= 0 or not has_usable_target(unit) or pos not in get_target_tiles(grid_field, unit, Vector2i.ZERO):
 		return
 	grid_field.clear_skill_state()
 	execute(grid_field, unit, get_impact_tiles(grid_field, pos), pos, 0)
@@ -27,11 +31,13 @@ func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i
 	grid_field.add_child(cloud)
 	cloud.setup(center, claimed)
 	cloud.set_rounds_left(zone_duration)
-	active_zones.append({"tiles": claimed, "turns": zone_duration, "cloud": cloud})
+	active_zones.append({"id": next_zone_id, "center": center, "tiles": claimed, "turns": zone_duration, "cloud": cloud})
+	next_zone_id += 1
 	for pos in claimed:
 		grid_field.tiles[pos].show_aoe(TileScene.get_team_aoe_color(unit.side), 0.35)
 
 func remove_aoe_position(grid_field: GridField, pos: Vector2i) -> void:
+	var zone_cleared := false
 	for zone in active_zones.duplicate():
 		if pos not in zone["tiles"]:
 			continue
@@ -40,10 +46,13 @@ func remove_aoe_position(grid_field: GridField, pos: Vector2i) -> void:
 		if zone["tiles"].is_empty():
 			zone["cloud"].queue_free()
 			active_zones.erase(zone)
+			zone_cleared = true
 	if grid_field.tiles.has(pos):
 		grid_field.tiles[pos].clear_aoe()
 	if active_zones.is_empty():
 		grid_field.remove_aoe_effect(self)
+		if zone_cleared:
+			cooldown_remaining = cooldown
 
 func get_aoe_zone_tiles(pos: Vector2i) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
@@ -69,6 +78,7 @@ func on_unit_turn_start(_grid_field: GridField, _unit: Unit) -> void:
 	pass # Wait through one caster turn, then strike at the following turn start.
 
 func on_owner_turn_start(grid_field: GridField) -> void:
+	var had_active_zones := not active_zones.is_empty()
 	for zone in active_zones.duplicate():
 		zone["turns"] -= 1
 		zone["cloud"].set_rounds_left(zone["turns"])
@@ -82,8 +92,11 @@ func on_owner_turn_start(grid_field: GridField) -> void:
 				grid_field.tiles[pos].clear_aoe()
 		zone["cloud"].queue_free()
 		active_zones.erase(zone)
+		cooldown_remaining = cooldown
 	if active_zones.is_empty():
 		grid_field.remove_aoe_effect(self)
+	if not had_active_zones and cooldown_remaining > 0:
+		cooldown_remaining -= 1
 
 func resolve_zone(grid_field: GridField, positions: Array[Vector2i]) -> void:
 	if not is_instance_valid(owner):

@@ -6,4 +6,5 @@
 script = ExtResource("1_1w01o")
 description = "Consume a pillar to create a 3x3 mud zone for 3 caster turns. Enemies take 10 damage when their turn starts inside. Units inside have at most 1 mobility and cannot use mobility skills. Overlaps replace only covered tiles."
 action_cost = 0
+cooldown = 2
 metadata/_custom_type_script = "uid://bdh8l77oovwaa"

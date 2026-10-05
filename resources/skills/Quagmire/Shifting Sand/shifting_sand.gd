@@ -11,12 +11,17 @@ var hovered_pillar := Vector2i(-1, -1)
 var direction_arrow: Polygon2D
 
 func has_usable_target(unit: Unit) -> bool:
+	if cooldown_remaining > 0:
+		return false
 	for skill in unit.skills:
 		if skill is Mud_Pillar:
 			return not skill.active_pillars.is_empty()
 	return false
 
 func begin(grid_field: GridField, unit: Unit) -> void:
+	if cooldown_remaining > 0:
+		grid_field.clear_skill_state()
+		return
 	grid_field.targeting_skill = true
 	owner = unit
 	stage = Stage.PILLAR
@@ -45,7 +50,7 @@ func update_preview(grid_field: GridField, _unit: Unit) -> void:
 		update_direction_preview(grid_field)
 
 func update_pillar_preview(grid_field: GridField) -> void:
-	var mouse_pos := grid_field.get_global_mouse_position()
+	var mouse_pos := grid_field.get_target_mouse_position()
 	var local_mouse := grid_field.to_local(mouse_pos)
 	var grid_pos := Vector2i(local_mouse / GridField.TILE_SIZE)
 
@@ -117,6 +122,8 @@ func get_line_tiles(grid_field: GridField, direction: Vector2i) -> Array[Vector2
 	return result
 	
 func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
+	if cooldown_remaining > 0:
+		return
 	if stage == Stage.PILLAR:
 		if mud_pillar_skill == null:
 			return
@@ -146,9 +153,14 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 		mud_pillar_skill.remove_pillar(grid_field, selected_pillar)
 
 		await execute(grid_field, unit, line_tiles, direction, 5)
+		cooldown_remaining = cooldown
 
 		grid_field.clean_up_skill()
 		grid_field.unit_panel.clear_skill_active()
+
+func on_owner_turn_start(_grid: GridField) -> void:
+	if cooldown_remaining > 0:
+		cooldown_remaining -= 1
 		
 func execute(grid_field: GridField, _unit: Unit, target_positions: Array[Vector2i], direction: Vector2i, distance: int) -> void:
 	var all_units = grid_field.player_units + grid_field.enemy_units

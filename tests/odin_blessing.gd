@@ -22,6 +22,9 @@ func run() -> void:
 	var canvas := load("res://scenes/canvas_layer.tscn").instantiate() as CanvasLayer
 	canvas.name = "CanvasLayer"
 	grid.add_child(canvas)
+	var radial := load("res://scenes/action_menu/radial_action_menu.tscn").instantiate() as Node2D
+	radial.name = "RadialActionMenu"
+	grid.add_child(radial)
 	root.add_child(grid)
 	var scene := load("res://scenes/tile/tile.tscn") as PackedScene
 	for x in range(6):

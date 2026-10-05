@@ -46,6 +46,9 @@ func get_target_tiles(
 
 			if not grid_field.tiles.has(target_position):
 				break
+			# Leap over obstructions, but never land on a unit or movement blocker.
+			if grid_field.is_tile_occupied(target_position, unit):
+				continue
 
 			target_positions.append(target_position)
 
@@ -82,15 +85,23 @@ func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i
 		target.take_damage(damage)
 		target.shake()
 		
+func has_usable_target(_unit: Unit) -> bool:
+	return cooldown_remaining <= 0
+
 func on_tile_clicked(
 	grid_field: GridField,
 	unit: Unit,
 	pos: Vector2i
 ) -> void:
+	if cooldown_remaining > 0:
+		return
 	if not grid_field.tiles.has(pos):
 		return
 
 	if grid_field.tiles[pos] not in grid_field.target_tiles:
+		return
+	# Revalidate at commit time in case the displayed target list is stale.
+	if grid_field.is_tile_occupied(pos, unit):
 		return
 
 	grid_field.targeting_skill = false
@@ -103,7 +114,12 @@ func on_tile_clicked(
 	var impact_tiles := get_impact_tiles(grid_field, unit.grid_position)
 	await grid_field.play_skill_presentation(self, impact_tiles)
 	execute(grid_field, unit, impact_tiles, Vector2i.ZERO, leap_distance)
+	cooldown_remaining = cooldown
 	grid_field.energy -= 1
 	grid_field.unit_panel.update_energy(grid_field.energy)
 	grid_field.clean_up_skill()
 	grid_field.unit_panel.clear_skill_active()
+
+func on_owner_turn_start(_grid: GridField) -> void:
+	if cooldown_remaining > 0:
+		cooldown_remaining -= 1
