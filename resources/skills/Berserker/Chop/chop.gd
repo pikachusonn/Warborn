@@ -99,12 +99,12 @@ func execute(
 	var blood_lust := BloodLust.get_blood_lust(unit)
 	var exec_info: Dictionary = {}
 	if blood_lust != null:
-		exec_info = blood_lust.record_execution("chop", unit)
+		exec_info = blood_lust.get_preview_data("chop")
 	var is_enhanced: bool = exec_info.get("is_enhanced", false)
 
 	var bonus_damage := 0
 	if is_enhanced:
-		var consumed: int = exec_info.get("stacks_consumed", 0)
+		var consumed: int = exec_info.get("stacks", 0)
 		var tier: float = exec_info.get("tier_percent", 0.0)
 		var max_health: int = unit.data.health if unit.data != null else 100
 		var missing_hp: int = max(0, max_health - unit.current_health)
@@ -129,6 +129,8 @@ func execute(
 	for target in targets:
 		target.take_damage(total_damage)
 		target.shake()
+	if blood_lust != null:
+		blood_lust.record_execution("chop", unit)
 
 func get_preview_damage(_grid: GridField, unit: Unit, target: Unit) -> int:
 	if target.side == unit.side:

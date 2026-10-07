@@ -32,6 +32,9 @@ func has_usable_target(unit: Unit) -> bool:
 	return false
 
 func begin(grid_field: GridField, unit: Unit) -> void:
+	if grid_field.energy < get_action_cost():
+		grid_field.clear_skill_state()
+		return
 	grid_field.targeting_skill = true
 	owner = unit
 	for skill in unit.skills:
@@ -81,6 +84,8 @@ func update_preview(grid_field: GridField, _unit: Unit) -> void:
 		grid_field.target_tiles.append(tile)
 		
 func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
+	if grid_field.energy < get_action_cost():
+		return
 	if cooldown_remaining > 0 or not active_zones.is_empty():
 		return
 	if not mud_pillar_skill.active_pillars.has(pos):
@@ -90,6 +95,8 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 	clear_pillar_highlights()
 	grid_field.clear_target_tiles()
 	create_quagmire_zone(grid_field, zone_tiles)
+	grid_field.energy -= get_action_cost()
+	grid_field.unit_panel.update_energy(grid_field.energy)
 	grid_field.targeting_skill = false
 	grid_field.clean_up_skill()
 	grid_field.unit_panel.clear_skill_active()

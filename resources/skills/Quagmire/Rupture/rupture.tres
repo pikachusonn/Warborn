@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_5b4u3")
 skill_name = "Rupture"
-description = "Destroy a pillar to affect its surrounding 3x3 area. Damage enemies and grant allies 30 temporary health. Costs no action points."
-action_cost = 0
+description = "Destroy a pillar to affect its surrounding 3x3 area. Damage enemies and grant allies 30 temporary health. Costs 1 energy."
+action_cost = 1
 damage = 10
 cooldown = 1
 metadata/_custom_type_script = "uid://fsquaqy1fev6"

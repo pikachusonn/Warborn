@@ -177,6 +177,13 @@ func _ready() -> void:
 		$CanvasLayer.add_child(team_health_hud)
 	if team_health_hud:
 		team_health_hud.setup(self)
+	var enemy_health_hud := $CanvasLayer.get_node_or_null("EnemyTeamHealthHUD") as TeamHealthHUD
+	if enemy_health_hud == null:
+		enemy_health_hud = preload("res://scenes/board/team_health_hud.gd").new()
+		enemy_health_hud.name = "EnemyTeamHealthHUD"
+		enemy_health_hud.enemy_team = true
+		$CanvasLayer.add_child(enemy_health_hud)
+	enemy_health_hud.setup(self)
 
 	unit_panel.move_pressed.connect(handle_move_pressed)
 	unit_panel.skill1_pressed.connect(handle_skill_pressed.bind(0, Action.SKILL1))
@@ -526,9 +533,10 @@ func update_health_previews() -> void:
 		unit.clear_health_preview()
 		if not targeting_skill or active_skill == null or active_unit == null:
 			continue
-		if unit.grid_position not in preview_positions:
+		var in_preview := unit.grid_position in preview_positions
+		if not in_preview and unit != active_unit:
 			continue
-		var preview_damage := active_skill.get_preview_damage(self, active_unit, unit)
+		var preview_damage := active_skill.get_preview_damage(self, active_unit, unit) if in_preview else 0
 		var preview_healing := active_skill.get_preview_healing(self, active_unit, unit)
 		unit.show_health_preview(preview_damage, preview_healing)
 

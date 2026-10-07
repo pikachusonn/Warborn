@@ -4,8 +4,8 @@
 [ext_resource type="SpriteFrames" uid="uid://cjvit7x08swd" path="res://resources/units/Berserker/enemy_berserker_idle.tres" id="2_dt6tw"]
 [ext_resource type="Script" uid="uid://h8whgw5dvdue" path="res://resources/unit_data.gd" id="3_x3f4j"]
 [ext_resource type="Script" uid="uid://drnl62itlgxtu" path="res://resources/skill.gd" id="4_00knq"]
-[ext_resource type="Resource" uid="uid://ym8880c361x" path="res://resources/skills/Berserker/Cleave/cleave.tres" id="5_cleave"]
-[ext_resource type="Resource" uid="uid://wc2e0qul5m4s" path="res://resources/skills/Berserker/Chop/chop.tres" id="6_chop"]
+[ext_resource type="Resource" uid="uid://c2r7n4m8k5v6p" path="res://resources/skills/Berserker/Cleave/cleave.tres" id="5_cleave"]
+[ext_resource type="Resource" uid="uid://drxtx2lq47ar8" path="res://resources/skills/Berserker/Chop/chop.tres" id="6_chop"]
 [ext_resource type="Resource" uid="uid://pmrq82pvub3s" path="res://resources/skills/Berserker/Crater Maker/crater_maker.tres" id="7_crater"]
 [ext_resource type="Resource" uid="uid://o1m5ydrrcgrs" path="res://resources/skills/Berserker/Blood Lust/blood_lust.tres" id="8_bloodlust"]
 

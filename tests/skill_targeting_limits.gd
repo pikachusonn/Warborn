@@ -34,6 +34,7 @@ func run() -> void:
 	grid.free_movement = true
 	var pillar := quagmire_unit.skills[0] as Mud_Pillar
 	var quagmire := quagmire_unit.skills[1] as Quagmire
+	grid.energy = 2
 	pillar.create_pillar_visual(grid, Vector2i(7, 7))
 	pillar.create_pillar_visual(grid, Vector2i(8, 7))
 	quagmire.begin(grid, quagmire_unit)

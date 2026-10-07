@@ -1,6 +1,9 @@
-extends SceneTree
+extends Node
 
-func _initialize() -> void:
+var root: Window
+
+func _ready() -> void:
+	root = get_tree().root
 	call_deferred("run")
 
 func run() -> void:
@@ -8,18 +11,30 @@ func run() -> void:
 	var session = root.get_node("Netplay")
 	var grid := preload("res://scenes/board/grid_field.tscn").instantiate() as GridField
 	root.add_child(grid)
-	await process_frame
+	await get_tree().process_frame
 
 	var hud: TeamHealthHUD = grid.team_health_hud
 	assert(hud != null, "team_health_hud should be instantiated and set up on GridField")
 
-	# Test 1: In local mode (not networked), HUD should be hidden
+	# Local teams remain on fixed sides regardless of whose turn it is.
 	session.mode = session.Mode.LOCAL
 	hud._process(0.016)
-	assert(not hud.visible, "HUD must be hidden in local mode")
+	assert(hud.visible, "Player HUD must be visible in local mode")
+	var enemy_hud := grid.get_node("CanvasLayer/EnemyTeamHealthHUD") as TeamHealthHUD
+	enemy_hud._process(0.016)
+	assert(enemy_hud.visible)
+	assert(hud.get_team_units() == grid.player_units)
+	assert(enemy_hud.get_team_units() == grid.enemy_units)
+	assert(enemy_hud.position.x > root.size.x / 2.0)
+	assert(enemy_hud.header_label.text == "ENEMY TEAM")
+	grid.enemy_units[0].current_health = 65
+	enemy_hud._process(0.016)
+	assert(enemy_hud.unit_rows[0].hp_bar.value == 65)
 
 	# Test 2: In multiplayer Host mode, HUD shows player_units
 	session.mode = session.Mode.HOST
+	enemy_hud._process(0.016)
+	assert(not enemy_hud.visible, "Extra enemy HUD is only shown in local play")
 	hud._process(0.016)
 	assert(hud.visible, "HUD must be visible in multiplayer mode")
 	var team_units := hud.get_team_units()
@@ -74,4 +89,4 @@ func run() -> void:
 		assert(hud.unit_rows[i].icon_rect.texture == expected_client_tex, "Client row must use zoomed enemy face")
 
 	print("PASS: TeamHealthHUD unit icons, health bars, shields, defeat state, and multiplayer host/client switching")
-	quit()
+	get_tree().quit()

@@ -1,6 +1,8 @@
 extends Control
 class_name TeamHealthHUD
 
+@export var enemy_team := false
+
 var grid: GridField = null
 
 var panel: PanelContainer
@@ -29,7 +31,15 @@ func setup(grid_field: GridField) -> void:
 
 func _build_ui() -> void:
 	# Positioned on the left side of the screen, below the "Leave match" header (Vector2(20, 16)).
-	position = Vector2(20, 80)
+	if enemy_team:
+		anchor_left = 1.0
+		anchor_right = 1.0
+		offset_left = -232.0
+		offset_right = -20.0
+		offset_top = 80.0
+		offset_bottom = 310.0
+	else:
+		position = Vector2(20, 80)
 	custom_minimum_size = Vector2(212, 0)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -71,7 +81,7 @@ func get_team_units() -> Array[Unit]:
 	if not is_instance_valid(grid):
 		return []
 	var is_client := Netplay.is_client() if Netplay else false
-	var source: Array[Unit] = grid.enemy_units if is_client else grid.player_units
+	var source: Array[Unit] = grid.enemy_units if enemy_team or is_client else grid.player_units
 	var result: Array[Unit] = []
 	for u in source:
 		if is_instance_valid(u):
@@ -211,13 +221,22 @@ func _create_unit_row(unit: Unit) -> Dictionary:
 
 func _process(_delta: float) -> void:
 	var is_networked := Netplay.is_networked() if Netplay else false
-	visible = is_networked
+	visible = is_instance_valid(grid) and (not enemy_team or not is_networked)
 	if not visible:
 		return
+	header_label.text = "ENEMY TEAM" if enemy_team else ("YOUR TEAM" if is_networked else "PLAYER TEAM")
 
 	var current_team := get_team_units()
-	if unit_rows.size() != current_team.size() or unit_rows.is_empty():
+	var rebuild := unit_rows.size() != current_team.size() or unit_rows.is_empty()
+	if not rebuild:
+		for index in current_team.size():
+			if unit_rows[index].unit != current_team[index]:
+				rebuild = true
+				break
+	if rebuild:
 		_rebuild_rows()
+	if enemy_team:
+		position.x = get_viewport_rect().size.x - panel.size.x - 20.0
 
 	for entry in unit_rows:
 		var unit: Unit = entry.unit

@@ -76,8 +76,26 @@ func _ready() -> void:
 	enemy_archer_mark.setup(status_tooltip, self)
 	stun_icon.setup(status_tooltip, self)
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta: float) -> void:
-	pass
+func _process(_delta: float) -> void:
+	if hp_bar.visible:
+		update_health_bar_position()
+
+func update_health_bar_position() -> void:
+	var shift := 0.0
+	var grid := get_parent() as GridField
+	if grid != null and health_preview_active and grid.targeting_skill:
+		var normal_bar_rect := Rect2(global_position + Vector2(-32, -64), hp_bar.size)
+		for other: Unit in grid.player_units + grid.enemy_units:
+			if other == self or other.is_defeated() or not other.is_visible_in_tree():
+				continue
+			if other.global_position.y >= global_position.y:
+				continue
+			var character_rect := Rect2(other.global_position - Vector2(32, 32), Vector2(64, 64))
+			if normal_bar_rect.intersects(character_rect):
+				shift = 55.0
+				break
+	hp_bar.position.y = -64.0 + shift
+	preview_amount_label.position.y = -88.0 + shift
 
 func setup(pos: Vector2i, unit_data: UnitData, unit_side):
 	has_completed_capture = false
@@ -169,6 +187,7 @@ func _draw():
 		3.0
 	)
 func update_hp_bar() -> void:
+	update_health_bar_position()
 	var max_health := data.health
 	var real_health = clamp(current_health, 0, max_health)
 	var shield_health = max(temp_health, 0)
@@ -198,6 +217,7 @@ func show_health_preview(damage_amount: int, healing_amount: int) -> void:
 	preview_healing = healing_amount
 	update_hp_bar()
 	health_preview_active = true
+	update_health_bar_position()
 	hp_bar.show()
 	effects_wrapper.set_position(Vector2i(-32, -82))
 
@@ -246,6 +266,7 @@ func clear_health_preview() -> void:
 	preview_healing = 0
 	var restore_hp_bar := health_preview_active
 	health_preview_active = false
+	update_health_bar_position()
 	shield_loss_preview.hide()
 	health_loss_preview.hide()
 	healing_preview.hide()
@@ -276,6 +297,7 @@ func heal(amount: int):
 	print('pre-heal: ', current_health)
 	current_health += amount;
 	current_health = min(current_health, data.health)
+	update_hp_bar()
 	print(data.unit_name, " healed ", amount, " HP. HP: ", current_health)
 
 func is_defeated() -> bool:

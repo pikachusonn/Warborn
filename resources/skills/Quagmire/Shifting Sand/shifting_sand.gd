@@ -1,6 +1,8 @@
 extends Skill
 class_name ShiftingSand
 
+const PUSH_DISTANCE := 3
+
 enum Stage { PILLAR, DIRECTION }
 
 var mud_pillar_skill: Mud_Pillar
@@ -152,7 +154,7 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 
 		mud_pillar_skill.remove_pillar(grid_field, selected_pillar)
 
-		await execute(grid_field, unit, line_tiles, direction, 5)
+		await execute(grid_field, unit, line_tiles, direction, PUSH_DISTANCE)
 		cooldown_remaining = cooldown
 
 		grid_field.clean_up_skill()
@@ -176,7 +178,7 @@ func execute(grid_field: GridField, _unit: Unit, target_positions: Array[Vector2
 
 	for target in affected_units:
 		var destination := target.grid_position
-		for step in range(distance):
+		for step in range(mini(distance, PUSH_DISTANCE)):
 			var next_pos := destination + direction
 			if not grid_field.tiles.has(next_pos):
 				break

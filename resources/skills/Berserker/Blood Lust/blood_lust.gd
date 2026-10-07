@@ -34,12 +34,9 @@ func get_preview_data(attack_name: String) -> Dictionary:
 			"tier_percent": get_tier_percent(stacks)
 		}
 	else:
-		var projected_stacks = stacks
-		if last_attack != "" and last_attack != attack_name:
-			projected_stacks = mini(stacks + 1, MAX_STACKS)
 		return {
 			"is_enhanced": false,
-			"stacks": projected_stacks,
+			"stacks": stacks,
 			"tier_percent": 0.0
 		}
 
@@ -58,8 +55,7 @@ func record_execution(attack_name: String, unit: Unit = null) -> Dictionary:
 			"tier_percent": tier
 		}
 	else:
-		if last_attack != "" and last_attack != attack_name:
-			stacks = mini(stacks + 1, MAX_STACKS)
+		stacks = mini(stacks + 1, MAX_STACKS)
 		last_attack = attack_name
 		if unit != null:
 			if stacks > 0:

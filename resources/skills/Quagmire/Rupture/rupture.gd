@@ -13,6 +13,9 @@ func has_usable_target(unit: Unit) -> bool:
 	return false
 
 func begin(grid_field: GridField, unit: Unit) -> void:
+	if grid_field.energy < get_action_cost():
+		grid_field.clear_skill_state()
+		return
 	grid_field.targeting_skill = true
 	for skill in unit.skills:
 		if skill is Mud_Pillar:
@@ -52,6 +55,8 @@ func get_zone_tiles(center: Vector2i) -> Array[Vector2i]:
 	return result
 
 func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
+	if grid_field.energy < get_action_cost():
+		return
 	if cooldown_remaining > 0:
 		return
 	if mud_pillar_skill == null:
@@ -63,6 +68,8 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 	mud_pillar_skill.remove_pillar(grid_field, pos)
 	await grid_field.play_skill_presentation(self, target_positions)
 	await execute(grid_field, unit, target_positions, Vector2i.ZERO, 1)
+	grid_field.energy -= get_action_cost()
+	grid_field.unit_panel.update_energy(grid_field.energy)
 	cooldown_remaining = cooldown
 	grid_field.clean_up_skill()
 	grid_field.unit_panel.clear_skill_active()

@@ -11,7 +11,7 @@
 
 [sub_resource type="Resource" id="Resource_8l0r6"]
 script = ExtResource("8_dqfur")
-description = "Consume a pillar and choose a direction. Push units in the selected line up to 5 tiles, stopping at occupied tiles or the board edge. Costs no action points."
+description = "Consume a pillar and choose a direction. Push units in the selected line up to 3 tiles, stopping at occupied tiles or the board edge. Costs no action points."
 action_cost = 0
 cooldown = 3
 metadata/_custom_type_script = "uid://dkptv4kdimxl8"

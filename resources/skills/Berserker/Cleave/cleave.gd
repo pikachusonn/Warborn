@@ -1,6 +1,8 @@
 extends Skill
 class_name Cleave
 
+const HEALING_TIERS := [0.0, 0.40, 0.55, 0.70, 0.85, 1.0]
+
 func begin(
 	grid_field: GridField,
 	_unit: Unit
@@ -151,7 +153,7 @@ func execute(
 	var blood_lust := BloodLust.get_blood_lust(unit)
 	var exec_info: Dictionary = {}
 	if blood_lust != null:
-		exec_info = blood_lust.record_execution("cleave", unit)
+		exec_info = blood_lust.get_preview_data("cleave")
 	var is_enhanced: bool = exec_info.get("is_enhanced", false)
 
 	var units := (
@@ -175,8 +177,8 @@ func execute(
 
 	var heal_amount := 0
 	if is_enhanced:
-		var consumed: int = exec_info.get("stacks_consumed", 0)
-		var tier: float = exec_info.get("tier_percent", 0.0)
+		var consumed: int = exec_info.get("stacks", 0)
+		var tier: float = HEALING_TIERS[consumed]
 		heal_amount = 5 * consumed + roundi(tier * float(total_damage_dealt))
 	else:
 		var current_stacks: int = exec_info.get("stacks", 0)
@@ -185,19 +187,31 @@ func execute(
 	if heal_amount > 0:
 		unit.heal(heal_amount)
 		unit.shake()
+	if blood_lust != null:
+		blood_lust.record_execution("cleave", unit)
 
 func get_preview_damage(_grid: GridField, unit: Unit, target: Unit) -> int:
 	return damage if target.side != unit.side else 0
 
-func get_preview_healing(_grid: GridField, unit: Unit, _target: Unit) -> int:
+func get_preview_healing(grid: GridField, unit: Unit, target: Unit) -> int:
+	if target != unit:
+		return 0
 	var blood_lust := BloodLust.get_blood_lust(unit)
 	if blood_lust == null:
 		return 0
 	var preview_data: Dictionary = blood_lust.get_preview_data("cleave")
 	if preview_data.get("is_enhanced", false):
 		var s: int = preview_data.get("stacks", 0)
-		var tier: float = preview_data.get("tier_percent", 0.0)
-		return 5 * s + roundi(tier * float(damage))
+		var tier: float = HEALING_TIERS[s]
+		var total_damage_dealt := 0
+		var preview_tiles := grid.impact_preview_tiles if not grid.impact_preview_tiles.is_empty() else grid.target_tiles
+		var positions: Array[Vector2i] = []
+		for tile in preview_tiles:
+			positions.append(tile.grid_position)
+		var enemies := grid.enemy_units if unit in grid.player_units else grid.player_units
+		for enemy in grid.get_units_on_tiles(positions, enemies):
+			total_damage_dealt += mini(enemy.current_health, maxi(damage - maxi(enemy.temp_health, 0), 0))
+		return 5 * s + roundi(tier * float(total_damage_dealt))
 	else:
 		var s: int = preview_data.get("stacks", 0)
 		return 5 * s
