@@ -87,11 +87,13 @@ class StepPip extends Control:
 
 func _ready() -> void:
 	mouse_filter = MOUSE_FILTER_IGNORE
+	z_index = 0
 	_build_ui()
 
 func _build_ui() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
+	z_index = 0
 
 	var center_box := CenterContainer.new()
 	center_box.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)

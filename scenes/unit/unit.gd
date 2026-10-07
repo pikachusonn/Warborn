@@ -9,7 +9,8 @@ enum Side {
 const EFFECTS = {
 	ALLY_ARCHER_MARK = 'ally_archer_mark',
 	ENEMY_ARCHER_MARK = 'enemy_archer_mark',
-	STUNNED = 'stunned'
+	STUNNED = 'stunned',
+	BLOOD_LUST = 'blood_lust'
 }
 
 @export var data: UnitData
@@ -49,6 +50,7 @@ const DUST_BURST := preload("res://scenes/effects/dust_burst.tscn")
 @export var enemy_sprite_frames: SpriteFrames
 @onready var click_area: UnitClickArea = $ClickArea
 @onready var hp_bar: ProgressBar = $HPBar
+@onready var blood_lust_icon: status_effect_icon = $StatusEffects/BloodLust
 @onready var ally_archer_mark: status_effect_icon = $StatusEffects/HunterMark
 @onready var enemy_archer_mark: status_effect_icon = $StatusEffects/EnemyHunterMark
 @onready var stun_icon: status_effect_icon = $StatusEffects/Stun
@@ -69,6 +71,7 @@ func _ready() -> void:
 	effects_wrapper.set_position(Vector2i(-32, -52))
 	status_tooltip = status_tooltip_scene.instantiate()
 	add_child(status_tooltip)
+	blood_lust_icon.setup(status_tooltip, self)
 	ally_archer_mark.setup(status_tooltip, self)
 	enemy_archer_mark.setup(status_tooltip, self)
 	stun_icon.setup(status_tooltip, self)
@@ -336,9 +339,25 @@ func deduct_status_stack(status: String):
 		remove_status(status)
 
 func update_status_icons():
-	ally_archer_mark.visible = has_status(EFFECTS.ALLY_ARCHER_MARK)
-	stun_icon.visible = has_status(EFFECTS.STUNNED)
-	enemy_archer_mark.visible = has_status(EFFECTS.ENEMY_ARCHER_MARK)
+	var bl_stacks: int = get_status_stacks(EFFECTS.BLOOD_LUST)
+	blood_lust_icon.visible = has_status(EFFECTS.BLOOD_LUST) and bl_stacks > 0
+	if blood_lust_icon.visible:
+		blood_lust_icon.set_stack_count(bl_stacks)
+
+	var ally_stacks: int = get_status_stacks(EFFECTS.ALLY_ARCHER_MARK)
+	ally_archer_mark.visible = has_status(EFFECTS.ALLY_ARCHER_MARK) and ally_stacks > 0
+	if ally_archer_mark.visible:
+		ally_archer_mark.set_stack_count(ally_stacks)
+
+	var enemy_stacks: int = get_status_stacks(EFFECTS.ENEMY_ARCHER_MARK)
+	enemy_archer_mark.visible = has_status(EFFECTS.ENEMY_ARCHER_MARK) and enemy_stacks > 0
+	if enemy_archer_mark.visible:
+		enemy_archer_mark.set_stack_count(enemy_stacks)
+
+	var stun_stacks: int = get_status_stacks(EFFECTS.STUNNED)
+	stun_icon.visible = has_status(EFFECTS.STUNNED) and stun_stacks > 0
+	if stun_icon.visible:
+		stun_icon.set_stack_count(stun_stacks)
 	
 func show_speech(text: String, duration := 1.5) -> void:
 	speech_label.text = text

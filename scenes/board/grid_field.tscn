@@ -26,12 +26,16 @@ z_index = -1
 texture_filter = 1
 script = ExtResource("9_grass")
 
-[node name="RadialActionMenu" parent="." unique_id=1142914654 instance=ExtResource("8_km5jl")]
-z_index = 20
+[node name="CanvasLayer" parent="." unique_id=31058534 instance=ExtResource("6_4gtxg")]
+
+[node name="RadialMenuLayer" type="CanvasLayer" parent="."]
+layer = 1
+follow_viewport_enabled = true
 
 [node name="Tile" parent="." unique_id=403099390 instance=ExtResource("2_7hqsk")]
 visible = false
 
 [node name="Unit" parent="." unique_id=1432069053 instance=ExtResource("3_7hqsk")]
 
-[node name="CanvasLayer" parent="." unique_id=31058534 instance=ExtResource("6_4gtxg")]
+[node name="RadialActionMenu" parent="RadialMenuLayer" unique_id=1142914654 instance=ExtResource("8_km5jl")]
+z_index = 2000

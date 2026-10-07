@@ -1,5 +1,5 @@
 extends Skill
-class_name Cleave
+class_name HelmSplitter
 
 
 func begin(

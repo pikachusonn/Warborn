@@ -13,6 +13,7 @@ bg_color = Color(0.1584723, 0.15847233, 0.1584723, 1)
 bg_color = Color(0.24, 0.72, 0.32, 1)
 
 [node name="CanvasLayer" type="CanvasLayer" unique_id=31058534]
+layer = 0
 
 [node name="BottomHUD" type="Panel" parent="." unique_id=1429654660]
 visible = false
@@ -158,6 +159,7 @@ size_flags_horizontal = 3
 text = "End Turn"
 
 [node name="TopCaptureHUD" type="Control" parent="." unique_id=1598759668]
+z_index = 0
 layout_mode = 3
 anchors_preset = 10
 anchor_right = 1.0
@@ -167,6 +169,7 @@ mouse_filter = 2
 script = ExtResource("3_top_hud")
 
 [node name="TeamHealthHUD" type="Control" parent="." unique_id=1598759670]
+z_index = 0
 layout_mode = 3
 anchors_preset = 0
 offset_left = 20.0

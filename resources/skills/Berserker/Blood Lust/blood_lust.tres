@@ -4,7 +4,8 @@
 
 [resource]
 script = ExtResource("1_sv3m5")
-description = "Passive: Helmet Splitter heals you for 30% of health damage dealt plus 20% of missing health (35% when at or below 40% health). Each kill adds 5 damage to Helmet Splitter."
+skill_name = "Blood Lust"
+description = "Passive: Alternating between Cleave and Chop grants 1 Blood Lust stack (max 5). Normal Cleave heals (5 × stacks) and normal Chop deals bonus damage (+5 × stacks). Consecutive uses trigger the Enhanced version, consuming all stacks for scaling bonuses."
 action_cost = 0
 is_passive = true
 metadata/_custom_type_script = "uid://dtla7edbvk1by"

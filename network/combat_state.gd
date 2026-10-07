@@ -1,7 +1,7 @@
 extends RefCounted
 ## Only the host runs rules. These snapshots give the client state to display,
 ## including legal target tiles; they never deserialize Objects or execute skills.
-const SKILL_FIELDS := ["cooldown_remaining", "damage", "execute_damage_bonus", "deployed", "stage", "free_cast"]
+const SKILL_FIELDS := ["cooldown_remaining", "damage", "execute_damage_bonus", "deployed", "stage", "free_cast", "stacks", "last_attack"]
 var grid: GridField
 var markers: Node2D
 var health_views: Dictionary = {}

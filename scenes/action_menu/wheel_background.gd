@@ -26,6 +26,61 @@ const HOVER_COLORS := [
 	Color(0.35, 0.85, 1.0),
 ]
 
+const END_TURN_RED := Color(1.0, 0.4, 0.45)
+const CASH_YELLOW := Color(1.0, 0.85, 0.18)
+const CASH_FINAL_ORANGE := Color(1.0, 0.32, 0.08)
+const ALTERNATE_BLUE_FILL := Color(0.18, 0.32, 0.55, 0.92)
+const ALTERNATE_BLUE_BORDER := Color(0.45, 0.78, 1.0)
+var pulse_time: float = 0.0
+
+func get_active_unit() -> Unit:
+	var grid := get_grid()
+	if grid != null and is_instance_valid(grid.active_unit):
+		return grid.active_unit
+	return null
+
+func get_grid() -> GridField:
+	var ancestor := get_parent()
+	while ancestor != null:
+		if ancestor is GridField:
+			return ancestor as GridField
+		ancestor = ancestor.get_parent()
+	return null
+
+func get_berserker_skill_status(segment_index: int) -> Dictionary:
+	if not skills_mode:
+		return {"is_alternating": false, "is_cashout": false, "stacks": 0}
+	var unit := get_active_unit()
+	if unit == null or unit.skills == null:
+		return {"is_alternating": false, "is_cashout": false, "stacks": 0}
+	var blood_lust := BloodLust.get_blood_lust(unit)
+	if blood_lust == null:
+		return {"is_alternating": false, "is_cashout": false, "stacks": 0}
+	
+	var skill_index := 3 - segment_index
+	if skill_index < 0 or skill_index >= unit.skills.size():
+		return {"is_alternating": false, "is_cashout": false, "stacks": 0}
+	
+	var skill: Skill = unit.skills[skill_index]
+	var is_alt := false
+	var is_cash := false
+	if skill is Cleave:
+		if blood_lust.last_attack == "chop":
+			is_alt = true
+		elif blood_lust.last_attack == "cleave":
+			is_cash = true
+	elif skill is Chop:
+		if blood_lust.last_attack == "cleave":
+			is_alt = true
+		elif blood_lust.last_attack == "chop":
+			is_cash = true
+	
+	return {
+		"is_alternating": is_alt,
+		"is_cashout": is_cash,
+		"stacks": blood_lust.stacks
+	}
+
 var hovered_segment := -1
 var skills_mode := false
 var capture_mode := false
@@ -141,8 +196,11 @@ func _input(event: InputEvent) -> void:
 			else:
 				action_pressed.emit()
 	
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	update_hover_from_point(get_local_mouse_position())
+	if skills_mode and is_visible_in_tree():
+		pulse_time += delta
+		queue_redraw()
 
 func update_hover_from_point(point: Vector2) -> void:
 	var next_segment := get_segment_at(point)
@@ -172,7 +230,7 @@ func update_skill_tooltip(segment: int) -> void:
 			skill_tooltip.hide_tooltip()
 		return
 
-	var grid := get_parent().get_parent() as GridField
+	var grid := get_grid()
 	if not is_visible_in_tree() or segment < 0 or grid == null:
 		skill_tooltip.hide_tooltip()
 		return
@@ -232,7 +290,9 @@ func _draw() -> void:
 		for index in range(segment_count()):
 			var angle := deg_to_rad(arc_start() + (index + 0.5) * arc_size() / segment_count())
 			var center := Vector2.from_angle(angle) * (inner_radius + outer_radius) / 2.0
-			var tint := Color(1, 1, 1, 0.28) if not is_segment_available(index) else (Color.WHITE if index == hovered_segment else Color(1, 1, 1, 0.8))
+			var bz_status := get_berserker_skill_status(index)
+			var is_special: bool = bz_status["is_cashout"] or bz_status["is_alternating"]
+			var tint := Color(1, 1, 1, 0.28) if not is_segment_available(index) else (Color.WHITE if (index == hovered_segment or is_special) else Color(1, 1, 1, 0.8))
 			draw_texture_rect(SKILL_ICON, Rect2(center - icon_size / 2.0, icon_size), false, tint)
 
 
@@ -252,18 +312,64 @@ func draw_segment(index: int) -> void:
 		var angle := lerpf(start, end, float(step) / CURVE_STEPS)
 		points.append(Vector2.from_angle(angle) * inner_radius)
 
-	var fill := FILL
-	var border := BORDER
-	if not is_segment_available(index):
-		fill = Color(0.12, 0.15, 0.19, 0.42)
-		border = Color(0.35, 0.39, 0.44, 0.4)
-	elif index == hovered_segment:
-		var tint: Color = SKILL_COLOR if skills_mode else HOVER_COLORS[index]
-		fill = Color(tint, 0.75)
-		border = Color(tint, 1.0)
-	draw_colored_polygon(points, fill)
 	var outline := points.duplicate()
 	outline.append(points[0])
-	draw_polyline(outline, Color(border, 0.06), 10.0, true)
-	draw_polyline(outline, Color(border, 0.12), 6.0, true)
-	draw_polyline(outline, border, 2.0, true)
+
+	if not is_segment_available(index):
+		var fill := Color(0.12, 0.15, 0.19, 0.42)
+		var border := Color(0.35, 0.39, 0.44, 0.4)
+		draw_colored_polygon(points, fill)
+		draw_polyline(outline, Color(border, 0.06), 10.0, true)
+		draw_polyline(outline, Color(border, 0.12), 6.0, true)
+		draw_polyline(outline, border, 2.0, true)
+		return
+
+	var bz_status := get_berserker_skill_status(index)
+	var is_hovered := (index == hovered_segment)
+
+	if bz_status["is_alternating"]:
+		# 1. Alternating skill: higher opacity for current blue + breathing glowing border like capture zone
+		var pulse_alpha := 0.65 + 0.25 * sin(pulse_time * 4.5)
+		var fill := ALTERNATE_BLUE_FILL
+		if is_hovered:
+			fill = Color(0.25, 0.45, 0.72, 0.96)
+		draw_colored_polygon(points, fill)
+
+		var glow_color := ALTERNATE_BLUE_BORDER
+		if is_hovered:
+			glow_color = Color(0.75, 0.92, 1.0)
+		draw_polyline(outline, Color(glow_color, pulse_alpha * 0.18), 14.0, true)
+		draw_polyline(outline, Color(glow_color, pulse_alpha * 0.38), 7.0, true)
+		draw_polyline(outline, Color(glow_color, pulse_alpha * 0.95), 2.5, true)
+
+	elif bz_status["is_cashout"]:
+		# 2. Cash-out skill: yellow to red/orange background, opacity, vibrancy, and glow scale with stacks
+		var stacks: int = bz_status["stacks"]
+		var stack_ratio := clampf(float(stacks) / 5.0, 0.0, 1.0)
+		var cash_color: Color = CASH_YELLOW.lerp(CASH_FINAL_ORANGE, stack_ratio)
+		var fill_alpha := lerpf(0.55, 0.90, stack_ratio)
+		var fill := Color(cash_color, fill_alpha)
+		if is_hovered:
+			fill = Color(cash_color.lerp(Color.WHITE, 0.25), minf(fill_alpha + 0.1, 1.0))
+		draw_colored_polygon(points, fill)
+
+		var cash_pulse := 0.70 + 0.30 * sin(pulse_time * (4.5 + stack_ratio * 3.0))
+		var glow_alpha := cash_pulse * (0.85 + 0.15 * stack_ratio)
+		var wide_width := 10.0 + 8.0 * stack_ratio
+		var mid_width := 5.0 + 5.0 * stack_ratio
+		var sharp_width := 2.0 + 1.5 * stack_ratio
+		draw_polyline(outline, Color(cash_color, glow_alpha * (0.15 + 0.20 * stack_ratio)), wide_width, true)
+		draw_polyline(outline, Color(cash_color, glow_alpha * (0.35 + 0.25 * stack_ratio)), mid_width, true)
+		draw_polyline(outline, Color(cash_color.lerp(Color.WHITE, 0.2), glow_alpha), sharp_width, true)
+
+	else:
+		var fill := FILL
+		var border := BORDER
+		if is_hovered:
+			var tint: Color = SKILL_COLOR if skills_mode else HOVER_COLORS[index]
+			fill = Color(tint, 0.75)
+			border = Color(tint, 1.0)
+		draw_colored_polygon(points, fill)
+		draw_polyline(outline, Color(border, 0.06), 10.0, true)
+		draw_polyline(outline, Color(border, 0.12), 6.0, true)
+		draw_polyline(outline, border, 2.0, true)

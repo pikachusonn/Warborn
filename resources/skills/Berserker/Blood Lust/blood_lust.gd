@@ -1,33 +1,74 @@
 extends Skill
 class_name BloodLust
 
-@export_range(0.0, 1.0) var damage_heal_percent: float = 0.3
-@export_range(0.0, 1.0) var missing_hp_heal_percent: float = 0.2
-@export_range(0.0, 1.0) var low_health_heal_percent: float = 0.35
-@export_range(0.0, 1.0) var low_health_threshold: float = 0.4
-@export var execution_damage_bonus: int = 5
+var stacks: int = 0
+const MAX_STACKS: int = 5
+var last_attack: String = "" # "cleave", "chop", or ""
 
-func on_skill_resolved(
-	_grid_field: GridField,
-	owner: Unit,
-	used_skill: Skill,
-	total_damage: int,
-	execution_count: int
-) -> void:
-	if not used_skill is Helmet_Splitter:
-		return
-	var max_health: int = owner.data.health
-	var missing_health: int = max_health - owner.current_health
-	var health_percent: float = (float(owner.current_health) / float(max_health))
-	var current_missing_hp_heal_percent := (
-		low_health_heal_percent
-		if health_percent <= low_health_threshold
-		else missing_hp_heal_percent
-	)
-	var healing_from_damage := roundi(total_damage * damage_heal_percent)
+static func get_blood_lust(unit: Unit) -> BloodLust:
+	if unit == null or unit.skills == null:
+		return null
+	for skill in unit.skills:
+		if skill is BloodLust:
+			return skill
+	return null
 
-	var healing_from_missing_health := roundi(missing_health * current_missing_hp_heal_percent)
-	owner.heal(healing_from_damage + healing_from_missing_health)
-	owner.shake()
-	if execution_count > 0:
-		used_skill.add_damage_bonus(execution_damage_bonus * execution_count)
+func get_tier_percent(s: int) -> float:
+	match s:
+		1: return 0.05
+		2: return 0.10
+		3: return 0.20
+		4: return 0.25
+		5: return 0.30
+		_: return 0.0
+
+func is_enhanced(attack_name: String) -> bool:
+	return last_attack == attack_name
+
+func get_preview_data(attack_name: String) -> Dictionary:
+	var enhanced := is_enhanced(attack_name)
+	if enhanced:
+		return {
+			"is_enhanced": true,
+			"stacks": stacks,
+			"tier_percent": get_tier_percent(stacks)
+		}
+	else:
+		var projected_stacks = stacks
+		if last_attack != "" and last_attack != attack_name:
+			projected_stacks = mini(stacks + 1, MAX_STACKS)
+		return {
+			"is_enhanced": false,
+			"stacks": projected_stacks,
+			"tier_percent": 0.0
+		}
+
+func record_execution(attack_name: String, unit: Unit = null) -> Dictionary:
+	var enhanced := is_enhanced(attack_name)
+	if enhanced:
+		var consumed := stacks
+		var tier := get_tier_percent(consumed)
+		stacks = 0
+		last_attack = ""
+		if unit != null:
+			unit.remove_status(Unit.EFFECTS.BLOOD_LUST)
+		return {
+			"is_enhanced": true,
+			"stacks_consumed": consumed,
+			"tier_percent": tier
+		}
+	else:
+		if last_attack != "" and last_attack != attack_name:
+			stacks = mini(stacks + 1, MAX_STACKS)
+		last_attack = attack_name
+		if unit != null:
+			if stacks > 0:
+				unit.status_effects[Unit.EFFECTS.BLOOD_LUST] = stacks
+				unit.update_status_icons()
+			else:
+				unit.remove_status(Unit.EFFECTS.BLOOD_LUST)
+		return {
+			"is_enhanced": false,
+			"stacks": stacks,
+			"tier_percent": 0.0
+		}

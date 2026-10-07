@@ -100,7 +100,8 @@ var team_health_hud: TeamHealthHUD = null
 @onready var netplay: Node = get_node("/root/Netplay")
 @onready var unit_panel: UnitPanel = $CanvasLayer/BottomHUD
 @onready var skill_cutscene: Control = $CanvasLayer/SkillCutscene
-@onready var radial_menu: Node2D = $RadialActionMenu
+@onready var radial_menu_layer: CanvasLayer = $RadialMenuLayer
+@onready var radial_menu: Node2D = $RadialMenuLayer/RadialActionMenu
 
 func _ready() -> void:
 	update_board_layout()
@@ -293,9 +294,14 @@ func update_board_layout() -> void:
 	rotation = PI if netplay.is_client() else 0.0
 	if netplay.is_client():
 		position += Vector2.ONE * board_size
+	# CanvasLayer ordering is required for the menu to draw above the HUD, but
+	# CanvasLayers do not inherit their Node2D parent's transform. Mirror the
+	# board transform so the menu remains centered on its unit.
+	radial_menu_layer.transform = transform
 	for child in get_children():
-		if child is Unit or child == radial_menu:
+		if child is Unit:
 			child.rotation = -rotation
+	radial_menu.rotation = -rotation
 
 func has_aoe_at(grid_pos: Vector2i) -> bool:
 	if not tiles.has(grid_pos):

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="Cleave" format=3 uid="uid://ym8880c361x"]
+
+[ext_resource type="Script" uid="uid://cqh1s7u8wve3" path="res://resources/skills/Berserker/Cleave/cleave.gd" id="1_cleave"]
+
+[resource]
+script = ExtResource("1_cleave")
+skill_name = "Cleave"
+description = "Strike enemies in a 3×1 arc and heal for 5 × Blood Lust stacks. Consecutive use becomes Enhanced Cleave: hits 3×3 around Berserker, healing 5 × stacks + % damage dealt."
+damage = 25
+metadata/_custom_type_script = "uid://cqh1s7u8wve3"

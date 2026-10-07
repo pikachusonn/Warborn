@@ -84,6 +84,42 @@ func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i
 			continue
 		target.take_damage(damage)
 		target.shake()
+	clear_hazards_and_objects(grid_field, target_positions)
+
+func clear_hazards_and_objects(grid_field: GridField, positions: Array[Vector2i]) -> void:
+	var all_units = grid_field.player_units + grid_field.enemy_units
+	for pos in positions:
+		# 1. Clear persistent hazard / AoE zones (Quagmire, Odin's cloud, etc.)
+		var effect = grid_field.aoe_tile_owners.get(pos)
+		if effect != null:
+			if effect.has_method("remove_aoe_position"):
+				effect.remove_aoe_position(grid_field, pos)
+			else:
+				grid_field.release_aoe_position(effect, pos)
+				if grid_field.tiles.has(pos):
+					grid_field.tiles[pos].clear_aoe()
+		elif grid_field.tiles.has(pos):
+			grid_field.tiles[pos].clear_aoe()
+
+		# 2. Clear Mud Pillars
+		for u in all_units:
+			for s in u.skills:
+				if s is Mud_Pillar:
+					s.remove_pillar(grid_field, pos)
+
+		var blocker = grid_field.movement_blockers.get(pos)
+		if blocker != null:
+			grid_field.remove_movement_blocker(pos, blocker)
+			if is_instance_valid(blocker):
+				blocker.queue_free()
+
+		# 3. Clear Hunter's Kit (bouncing pads)
+		var pad: Hunter_kit = grid_field.bouncing_pads.get(pos, null)
+		if pad != null:
+			grid_field.remove_bouncing_pad(pos)
+			if is_instance_valid(pad.pad_visual):
+				pad.pad_visual.queue_free()
+			pad.deployed = false
 		
 func has_usable_target(_unit: Unit) -> bool:
 	return cooldown_remaining <= 0
