@@ -10,6 +10,13 @@
 [ext_resource type="Resource" uid="uid://5vbwgiolhbpg" path="res://resources/units/Berserker/Berserker.tres" id="7_bkt86"]
 [ext_resource type="PackedScene" uid="uid://dmm8yt1uumivp" path="res://scenes/action_menu/radial_action_menu.tscn" id="8_km5jl"]
 [ext_resource type="Script" uid="uid://dfrpa66nytn3i" path="res://scenes/board/grass_background.gd" id="9_grass"]
+[ext_resource type="Texture2D" path="res://assets/terrain/cavern_abyss_board_straight.png" id="10_cavern_bg"]
+
+[sub_resource type="Shader" id="Shader_background_lighting"]
+code = "shader_type canvas_item;\n\nuniform vec2 light_center = vec2(0.5, 0.48);\nuniform float center_alpha : hint_range(0.0, 1.0) = 0.55;\nuniform float edge_alpha : hint_range(0.0, 1.0) = 0.78;\nuniform float glow_radius : hint_range(0.05, 1.0) = 0.24;\nuniform float falloff_end : hint_range(0.05, 1.5) = 0.72;\n\nvoid fragment() {\n\tvec2 offset = UV - light_center;\n\toffset.x *= SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x;\n\tfloat distance_from_light = length(offset);\n\tfloat vignette = smoothstep(glow_radius, falloff_end, distance_from_light);\n\tfloat veil_alpha = mix(center_alpha, edge_alpha, vignette);\n\tvec3 cool_black = mix(vec3(0.012, 0.018, 0.04), vec3(0.002, 0.003, 0.008), vignette);\n\tCOLOR = vec4(cool_black, veil_alpha);\n}\n"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_background_lighting"]
+shader = SubResource("Shader_background_lighting")
 
 [node name="GridField" type="Node2D" unique_id=1515789650]
 script = ExtResource("1_mnn36")
@@ -20,10 +27,30 @@ archer_data = ExtResource("5_xmbel")
 quagmire_data = ExtResource("6_2lxyn")
 berserker_data = ExtResource("7_bkt86")
 
+[node name="BackgroundLayer" type="CanvasLayer" parent="."]
+layer = -10
+
+[node name="CavernBackground" type="TextureRect" parent="BackgroundLayer"]
+mouse_filter = 2
+texture = ExtResource("10_cavern_bg")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="BackgroundVeil" type="ColorRect" parent="BackgroundLayer"]
+visible = false
+material = SubResource("ShaderMaterial_background_lighting")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
 [node name="GrassBackground" type="Node2D" parent="." unique_id=716506532]
-self_modulate = Color(0.7921569, 0.8352941, 0.79607844, 0.93333334)
+visible = false
 z_index = -1
-texture_filter = 1
+texture_filter = 2
 script = ExtResource("9_grass")
 
 [node name="CanvasLayer" parent="." unique_id=31058534 instance=ExtResource("6_4gtxg")]

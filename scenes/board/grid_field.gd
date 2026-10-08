@@ -6,6 +6,9 @@ class_name GridField
 const WIDTH := 10
 const HEIGHT := 10
 const TILE_SIZE := 64
+const BAKED_BOARD_ORIGIN := Vector2(488.0, 99.0)
+const BAKED_BOARD_SIZE := Vector2(696.0, 716.0)
+const BAKED_BACKGROUND_SIZE := Vector2(1672.0, 941.0)
 
 static func is_mobile() -> bool:
 	return OS.has_feature("mobile") or OS.get_name() in ["Android", "iOS"] or DisplayServer.is_touchscreen_available()
@@ -102,6 +105,7 @@ var team_health_hud: TeamHealthHUD = null
 @onready var skill_cutscene: Control = $CanvasLayer/SkillCutscene
 @onready var radial_menu_layer: CanvasLayer = $RadialMenuLayer
 @onready var radial_menu: Node2D = $RadialMenuLayer/RadialActionMenu
+@onready var cavern_background: TextureRect = $BackgroundLayer/CavernBackground
 
 func _ready() -> void:
 	update_board_layout()
@@ -287,9 +291,15 @@ func handle_radial_end_turn() -> void:
 func update_board_layout() -> void:
 	var viewport_size := get_viewport_rect().size
 	var board_size := viewport_size.y * 0.80
+	var board_screen_position := Vector2((viewport_size.x - board_size) / 2.0, viewport_size.y * 0.135)
 	scale = Vector2.ONE * board_size / (HEIGHT * TILE_SIZE)
 	# Leave 13.5% above the board to give comfortable breathing room below the scoreboard.
-	position = Vector2((viewport_size.x - board_size) / 2.0, viewport_size.y * 0.135)
+	position = board_screen_position
+	# Fit the baked board in the arena art to the logical board exactly. Scaling
+	# the full image to the viewport made the two grids drift at non-16:9 sizes.
+	var background_scale := Vector2.ONE * board_size / BAKED_BOARD_SIZE
+	cavern_background.position = board_screen_position - BAKED_BOARD_ORIGIN * background_scale
+	cavern_background.size = BAKED_BACKGROUND_SIZE * background_scale
 	# Both peers retain the same logical coordinates. Only the guest's view rotates.
 	rotation = PI if netplay.is_client() else 0.0
 	if netplay.is_client():

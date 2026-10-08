@@ -8,7 +8,7 @@ enum CaptureState {
 	CAPTURING
 }
 
-const NEUTRAL_FILL := Color(0.178, 0.207, 0.251, 0.35)
+const NEUTRAL_FILL := Color.TRANSPARENT
 const NEUTRAL_BORDER := Color(0.72, 0.78, 0.86, 0.8)
 
 const PLAYER_FILL := Color(0.15, 0.55, 1.0, 0.28)

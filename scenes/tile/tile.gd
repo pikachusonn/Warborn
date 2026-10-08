@@ -4,6 +4,7 @@ const TILE_SIZE := 64;
 var is_hovered := false;
 var quagmire_base_color := Color.WHITE
 var aoe_base_color := Color.WHITE
+var highlight_color := Color.TRANSPARENT
 
 static func get_team_aoe_color(side) -> Color:
 	return Color(0.576, 0.609, 0.99, 0.8) if side == Unit.Side.PLAYER else Color(1.0, 0.667, 0.749, 1.0)
@@ -30,41 +31,30 @@ func setup(cord: Vector2i):
 	position = Vector2(grid_position) * TILE_SIZE;
 	
 func _draw() -> void:
-	if modulate != Color.WHITE:
-		# The tile art is on the board background, so targeting needs its own fill.
-		draw_rect(Rect2(Vector2.ZERO, Vector2(TILE_SIZE, TILE_SIZE)), Color(1, 1, 1, 0.5), true)
+	# Neutral tiles draw no fill, leaving the board texture fully visible.
+	if highlight_color.a > 0.0:
+		draw_rect(Rect2(Vector2.ZERO, Vector2(TILE_SIZE, TILE_SIZE)), highlight_color, true)
 	if is_hovered:
 		draw_rect(Rect2(Vector2.ZERO, Vector2(TILE_SIZE, TILE_SIZE)), Color(0.78, 0.78, 0.78, 0.25), true)
-	var grid_line := Color(1, 1, 1, 0.32)
-	if grid_position.x < 9:
-		draw_line(Vector2(TILE_SIZE, 0), Vector2(TILE_SIZE, TILE_SIZE), grid_line, 1.0)
-	if grid_position.y < 9:
-		draw_line(Vector2(0, TILE_SIZE), Vector2(TILE_SIZE, TILE_SIZE), grid_line, 1.0)
 
 func set_moveable(val: bool):
-	if val:
-		modulate = Color(0.5, 0.8, 1)
-	else: 
-		modulate = Color.WHITE
+	highlight_color = Color(0.5, 0.8, 1.0, 0.5) if val else Color.TRANSPARENT
 	queue_redraw()
 		
 func set_attackable(val: bool):
-	if val:
-		modulate = Color(1.0, 0.8, 0.3)
-	else:
-		modulate = Color.WHITE
+	highlight_color = Color(1.0, 0.8, 0.3, 0.5) if val else Color.TRANSPARENT
 	queue_redraw()
 		
 func set_attack_preview():
-	modulate = Color(1.0, 0.8, 0.3)
+	highlight_color = Color(1.0, 0.8, 0.3, 0.5)
 	queue_redraw()
 
 func set_attack_warning():
-	modulate = Color(1.0, 0.2, 0.2)
+	highlight_color = Color(1.0, 0.2, 0.2, 0.5)
 	queue_redraw()
 
 func clear_attack():
-	modulate = Color.WHITE
+	highlight_color = Color.TRANSPARENT
 	queue_redraw()
 		
 func _on_clicked():
