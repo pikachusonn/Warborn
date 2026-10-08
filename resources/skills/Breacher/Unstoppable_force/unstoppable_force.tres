@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_o7b0a")
 skill_name = "Unstoppable Force"
-description = "Charge forward, damaging enemies in your path and knocking them away. Enemies directly ahead are launched beyond your landing position."
+description = "Charge forward, damaging enemies and knocking all units in your path away. Units directly ahead are launched beyond your landing position. Clears ground hazards and objects in the charge area."
 damage = 10
 is_mobile = true
 cooldown = 3

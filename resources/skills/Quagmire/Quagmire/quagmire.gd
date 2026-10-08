@@ -18,7 +18,7 @@ var owner: Unit = null
 var hovered_pillar: Vector2i = Vector2i(-1, -1)
 var active_zones: Array[Dictionary] = []
 var zone_duration := 3
-var zone_damage := 10
+var zone_damage := 15
 
 func get_tooltip_damage() -> int:
 	return zone_damage

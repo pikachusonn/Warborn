@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_sv3m5")
 skill_name = "Blood Lust"
-description = "Passive: The first Cleave or Chop grants 1 Blood Lust stack. Alternating between Cleave and Chop grants another stack (max 5). Normal Cleave heals (5 × stacks) and normal Chop deals bonus damage (+5 × stacks). Consecutive uses trigger the Enhanced version, consuming all stacks for scaling bonuses."
+description = "Passive: The first Cleave or Chop grants 1 Blood Lust stack. Alternating between Cleave and Chop grants another stack (max 5). Normal Cleave heals (5 + 5 × stacks) and normal Chop deals bonus damage (+5 × stacks). Consecutive uses trigger the Enhanced version, consuming all stacks for scaling bonuses."
 action_cost = 0
 is_passive = true
 metadata/_custom_type_script = "uid://dtla7edbvk1by"

@@ -166,7 +166,7 @@ layout_mode = 2
 texture = ExtResource("3_bhlit")
 script = ExtResource("4_0wuuu")
 status_name = "Ally hunter mark"
-description = "Heal for 5HP/1 mark when the marks are detonated by ally archer"
+description = "Heal for 10 HP per mark when the marks are detonated by an allied Archer"
 status_id = "ally_archer_mark"
 
 [node name="StackLabel" type="Label" parent="StatusEffects/HunterMark"]

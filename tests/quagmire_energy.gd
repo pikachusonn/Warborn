@@ -15,29 +15,36 @@ func run() -> void:
 	var quagmire := caster.skills[1] as Quagmire
 	var rupture := caster.skills[2] as Rupture
 	var shifting := caster.skills[3] as ShiftingSand
-	assert(quagmire.get_action_cost() == 1 and rupture.get_action_cost() == 1)
+	assert(quagmire.get_action_cost() == 0 and rupture.get_action_cost() == 0)
 	assert(shifting.get_action_cost() == 0)
 	pillar.create_pillar_visual(grid, Vector2i(7, 7))
 	pillar.create_pillar_visual(grid, Vector2i(8, 7))
 	grid.energy = 0
-	assert(not grid.can_use_skill(1) and not grid.can_use_skill(2))
+	assert(grid.can_use_skill(1) and grid.can_use_skill(2))
 	quagmire.begin(grid, caster)
-	assert(not grid.targeting_skill)
+	assert(grid.targeting_skill)
+	grid.clear_skill_state()
 	rupture.begin(grid, caster)
-	assert(not grid.targeting_skill)
-	grid.energy = 2
+	assert(grid.targeting_skill)
+	grid.clear_skill_state()
 	quagmire.begin(grid, caster)
 	quagmire.on_tile_clicked(grid, caster, Vector2i(7, 7))
-	assert(grid.energy == 1 and not quagmire.active_zones.is_empty())
+	assert(grid.energy == 0 and not quagmire.active_zones.is_empty())
+	var affected_enemy: Unit = grid.enemy_units[0]
+	affected_enemy.grid_position = Vector2i(7, 7)
+	var health_before := affected_enemy.current_health
+	grid.apply_aoe_effects(affected_enemy)
+	assert(affected_enemy.current_health == health_before - 15)
+	grid.apply_aoe_effects(affected_enemy)
+	assert(affected_enemy.current_health == health_before - 30)
 	assert(not pillar.active_pillars.has(Vector2i(7, 7)))
 	rupture.begin(grid, caster)
-	grid.energy = 0
 	await rupture.on_tile_clicked(grid, caster, Vector2i(8, 7))
-	assert(pillar.active_pillars.has(Vector2i(8, 7)))
-	grid.energy = 1
-	await rupture.on_tile_clicked(grid, caster, Vector2i(8, 7))
-	assert(grid.energy == 0 and rupture.cooldown_remaining == rupture.cooldown)
+	assert(grid.energy == 0 and rupture.cooldown_remaining == 3)
 	assert(not pillar.active_pillars.has(Vector2i(8, 7)))
+	for remaining in [2, 1, 0]:
+		rupture.on_owner_turn_start(grid)
+		assert(rupture.cooldown_remaining == remaining)
 	var target: Unit = grid.enemy_units[0]
 	target.grid_position = Vector2i(2, 5)
 	var positions: Array[Vector2i] = [target.grid_position]
@@ -47,5 +54,5 @@ func run() -> void:
 	positions.assign([target.grid_position])
 	await shifting.execute(grid, caster, positions, Vector2i.RIGHT, 3)
 	assert(target.grid_position == Vector2i(6, 5), "Push still stops before blockers")
-	print("PASS: Quagmire and Rupture energy costs; Shifting Sand three-tile push")
+	print("PASS: Quagmire deals 15 damage per tick; zero-cost skills, Rupture cooldown, and Shifting Sand push")
 	get_tree().quit()

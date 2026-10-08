@@ -80,7 +80,8 @@ func _build_ui() -> void:
 func get_team_units() -> Array[Unit]:
 	if not is_instance_valid(grid):
 		return []
-	var is_client := Netplay.is_client() if Netplay else false
+	var session := get_node_or_null("/root/Netplay")
+	var is_client: bool = session != null and session.is_client()
 	var source: Array[Unit] = grid.enemy_units if enemy_team or is_client else grid.player_units
 	var result: Array[Unit] = []
 	for u in source:
@@ -220,7 +221,8 @@ func _create_unit_row(unit: Unit) -> Dictionary:
 	}
 
 func _process(_delta: float) -> void:
-	var is_networked := Netplay.is_networked() if Netplay else false
+	var session := get_node_or_null("/root/Netplay")
+	var is_networked: bool = session != null and session.is_networked()
 	visible = is_instance_valid(grid) and (not enemy_team or not is_networked)
 	if not visible:
 		return

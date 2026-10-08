@@ -51,10 +51,10 @@ func _ready() -> void:
 	assert(passive.stacks == 1, "First Cleave grants one stack")
 	enemy.temp_health = 10
 	grid.update_health_previews()
-	assert(caster.shown_healing == 11, "Enhanced healing uses HP damage after shields")
+	assert(caster.shown_healing == 18, "Enhanced healing uses HP damage after shields")
 	assert(enemy.shown_healing == 0)
 	grid.active_skill.execute(grid, caster, positions, Vector2i.UP, 1)
-	assert(caster.current_health == 51 and enemy.current_health == 60)
+	assert(caster.current_health == 58 and enemy.current_health == 60)
 	assert(passive.stacks == 0)
 	caster.heal(1000)
 	assert(caster.current_health == caster.data.health)
@@ -64,11 +64,11 @@ func _ready() -> void:
 	assert(passive.stacks == 1 and enemy.current_health == 40)
 	caster.current_health = 40
 	grid.update_health_previews()
-	assert(caster.shown_healing == 5 and enemy.shown_healing == 0)
+	assert(caster.shown_healing == 10 and enemy.shown_healing == 0)
 	grid.active_skill.execute(grid, caster, positions, Vector2i.UP, 1)
-	assert(passive.stacks == 2 and caster.current_health == 45)
+	assert(passive.stacks == 2 and caster.current_health == 50)
 	grid.active_skill.damage = 20
-	var expected_heals := [0, 13, 21, 29, 37, 45]
+	var expected_heals := [0, 20, 26, 34, 42, 50]
 	for stacks in range(1, 6):
 		passive.stacks = stacks
 		passive.last_attack = "cleave"
@@ -80,14 +80,17 @@ func _ready() -> void:
 		assert(caster.shown_healing == expected_healing)
 		grid.active_skill.execute(grid, caster, positions, Vector2i.UP, 1)
 		assert(caster.current_health == 1 + expected_healing)
-	passive.stacks = 2
-	passive.last_attack = "chop"
-	caster.current_health = 40
-	enemy.current_health = 100
-	grid.update_health_previews()
-	assert(caster.shown_healing == 10)
-	grid.active_skill.execute(grid, caster, positions, Vector2i.UP, 1)
-	assert(caster.current_health == 50 and passive.stacks == 3)
+	var expected_base_heals := [0, 10, 15, 20, 25, 30]
+	for stacks in range(1, 6):
+		passive.stacks = stacks
+		passive.last_attack = "chop"
+		caster.current_health = 40
+		enemy.current_health = 100
+		var expected_base_healing: int = expected_base_heals[stacks]
+		grid.update_health_previews()
+		assert(caster.shown_healing == expected_base_healing)
+		grid.active_skill.execute(grid, caster, positions, Vector2i.UP, 1)
+		assert(caster.current_health == 40 + expected_base_healing)
 	tile.free()
 	caster.free()
 	enemy.free()

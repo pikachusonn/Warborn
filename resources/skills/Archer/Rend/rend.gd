@@ -77,7 +77,7 @@ func execute(
 		var stacks := target.get_status_stacks(Unit.EFFECTS.ALLY_ARCHER_MARK)
 		if stacks <= 0:
 			continue
-		target.heal(5 * stacks)
+		target.heal(10 * stacks)
 		target.remove_status(Unit.EFFECTS.ALLY_ARCHER_MARK)
 		target.shake()
 
@@ -89,7 +89,7 @@ func get_preview_damage(_grid: GridField, unit: Unit, target: Unit) -> int:
 func get_preview_healing(_grid: GridField, unit: Unit, target: Unit) -> int:
 	if target.side != unit.side:
 		return 0
-	return 5 * target.get_status_stacks(Unit.EFFECTS.ALLY_ARCHER_MARK)
+	return 10 * target.get_status_stacks(Unit.EFFECTS.ALLY_ARCHER_MARK)
 		
 		
 func reset_targets_visuals(grid_field: GridField, unit: Unit) -> void:

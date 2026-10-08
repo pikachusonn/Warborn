@@ -1,11 +1,15 @@
 extends SceneTree
 
+class DummyCloud extends Node:
+	func set_tiles(_tiles: Array) -> void:
+		pass
+
 # Test suite for cooldown mechanics of all 6 updated skills:
 # 1. Unstoppable Force (Breacher): 3 turns cooldown after execution.
 # 2. Crater Maker (Berserker): 3 turns cooldown forced after execution.
 # 3. Odin's Blessing (Berserker): 3 turns cooldown after cloud strikes or after cloud gets overwritten completely.
 # 4. Quagmire (Quagmire): 2 turns cooldown after execution expires or after quagmire gets overwritten completely.
-# 5. Eruption / Rupture (Quagmire): 1 turn cooldown after execution.
+# 5. Eruption / Rupture (Quagmire): 3 turns cooldown after execution.
 # 6. Shifting Sand (Quagmire): 3 turns cooldown after execution.
 
 func _initialize() -> void:
@@ -60,7 +64,7 @@ func run() -> void:
 	assert(blessing.has_usable_target(unit))
 
 	# Test 3a: Strike expiry trigger
-	var dummy_cloud_1 = Node.new()
+	var dummy_cloud_1 = DummyCloud.new()
 	blessing.active_zones.append({"turns": 2, "tiles": [Vector2i(0, 0)], "cloud": dummy_cloud_1})
 	assert(not blessing.has_usable_target(unit)) # Inactive while cloud active
 	# Turn 1
@@ -80,7 +84,7 @@ func run() -> void:
 	assert(blessing.has_usable_target(unit))
 
 	# Test 3b: Overwritten completely trigger
-	var dummy_cloud_2 = Node.new()
+	var dummy_cloud_2 = DummyCloud.new()
 	blessing.active_zones.append({"turns": 2, "tiles": [Vector2i(1, 1)], "cloud": dummy_cloud_2})
 	blessing.remove_aoe_position(grid, Vector2i(1, 1))
 	assert(blessing.active_zones.is_empty())
@@ -102,7 +106,8 @@ func run() -> void:
 	assert(quagmire.cooldown_remaining == 0)
 
 	var pillar_skill = Mud_Pillar.new()
-	pillar_skill.active_pillars.append(Vector2i(5, 5))
+	var pillar_visual := Node2D.new()
+	pillar_skill.active_pillars[Vector2i(5, 5)] = pillar_visual
 	unit.skills.append(pillar_skill)
 	unit.skills.append(quagmire)
 	assert(quagmire.has_usable_target(unit))
@@ -140,11 +145,15 @@ func run() -> void:
 
 	print("Testing Skill 5: Eruption / Rupture...")
 	var rupture = load("res://resources/skills/Quagmire/Rupture/rupture.tres").duplicate() as Rupture
-	assert(rupture.cooldown == 1)
+	assert(rupture.cooldown == 3)
 	assert(rupture.cooldown_remaining == 0)
 	assert(rupture.has_usable_target(unit))
 	rupture.cooldown_remaining = rupture.cooldown
 	assert(not rupture.has_usable_target(unit))
+	assert(rupture.cooldown_remaining == 3)
+	rupture.on_owner_turn_start(grid)
+	assert(rupture.cooldown_remaining == 2)
+	rupture.on_owner_turn_start(grid)
 	assert(rupture.cooldown_remaining == 1)
 	rupture.on_owner_turn_start(grid)
 	assert(rupture.cooldown_remaining == 0)
@@ -168,6 +177,7 @@ func run() -> void:
 	assert(shifting.has_usable_target(unit))
 	print("PASS: Shifting Sand cooldown")
 
+	pillar_visual.free()
 	grid.free()
 	unit.free()
 	print("ALL 6 SKILL COOLDOWN TESTS PASSED SUCCESSFULLY!")

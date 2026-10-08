@@ -1,7 +1,10 @@
 extends Skill
 class_name Cleave
 
-const HEALING_TIERS := [0.0, 0.40, 0.55, 0.70, 0.85, 1.0]
+const HEALING_TIERS := [0.0, 0.50, 0.55, 0.70, 0.85, 1.0]
+
+func get_stack_healing(stacks: int) -> int:
+	return 5 + 5 * stacks if stacks > 0 else 0
 
 func begin(
 	grid_field: GridField,
@@ -179,10 +182,10 @@ func execute(
 	if is_enhanced:
 		var consumed: int = exec_info.get("stacks", 0)
 		var tier: float = HEALING_TIERS[consumed]
-		heal_amount = 5 * consumed + roundi(tier * float(total_damage_dealt))
+		heal_amount = get_stack_healing(consumed) + roundi(tier * float(total_damage_dealt))
 	else:
 		var current_stacks: int = exec_info.get("stacks", 0)
-		heal_amount = 5 * current_stacks
+		heal_amount = get_stack_healing(current_stacks)
 
 	if heal_amount > 0:
 		unit.heal(heal_amount)
@@ -211,7 +214,7 @@ func get_preview_healing(grid: GridField, unit: Unit, target: Unit) -> int:
 		var enemies := grid.enemy_units if unit in grid.player_units else grid.player_units
 		for enemy in grid.get_units_on_tiles(positions, enemies):
 			total_damage_dealt += mini(enemy.current_health, maxi(damage - maxi(enemy.temp_health, 0), 0))
-		return 5 * s + roundi(tier * float(total_damage_dealt))
+		return get_stack_healing(s) + roundi(tier * float(total_damage_dealt))
 	else:
 		var s: int = preview_data.get("stacks", 0)
-		return 5 * s
+		return get_stack_healing(s)

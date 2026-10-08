@@ -5,6 +5,6 @@
 [resource]
 script = ExtResource("1_bi1hm")
 skill_name = "Rend"
-description = "Consume all marks: each enemy mark deals the 10 damage, and each ally mark restores 5 health to that ally."
+description = "Consume all marks: each enemy mark deals 10 damage, and each ally mark restores 10 health to that ally."
 damage = 10
 metadata/_custom_type_script = "uid://cu7s7oqyudsje"

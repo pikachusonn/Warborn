@@ -38,7 +38,7 @@ func on_tile_clicked(
 	if cooldown_remaining > 0:
 		return
 	var direction := grid_field.get_direction_to_mouse(unit.global_position)
-	var distance := grid_field.get_skill_distance(unit)
+	var distance := clampi(_forward_distance(unit.grid_position, pos, direction), 1, 3)
 
 	var target_positions := get_target_tiles(
 		grid_field,
@@ -143,40 +143,49 @@ func get_displacement_direction(
 			return Vector2i.RIGHT
 		
 func execute(grid: GridField, unit: Unit, target_positions: Array[Vector2i], direction: Vector2i, distance: int) -> void:
-	var units = grid.enemy_units if unit in grid.player_units else grid.player_units
+	var enemies = grid.enemy_units if unit in grid.player_units else grid.player_units
 	var start_position := unit.grid_position
-	var destination := start_position + direction * distance
-	# Pull destination back until it is inside the board.
+	var destination := start_position + direction * clampi(distance, 1, 3)
 	while not grid.tiles.has(destination) and destination != start_position:
 		destination -= direction
-	var targets := grid.get_units_on_tiles(target_positions, units)
-	# Find a head-on target.
-	var head_on_target: Unit = null
+	var targets := grid.get_units_on_tiles(target_positions, grid.player_units + grid.enemy_units)
+	targets.erase(unit)
+	# Resolve the farthest units first so a charge can push a line of units.
+	targets.sort_custom(func(a: Unit, b: Unit) -> bool:
+		return _forward_distance(start_position, a.grid_position, direction) > _forward_distance(start_position, b.grid_position, direction)
+	)
 	for target in targets:
+		if target in enemies:
+			target.take_damage(damage)
 		var displacement := get_displacement_direction_from_position(start_position, target, direction)
 		if displacement == direction:
-			head_on_target = target
-			break
-	# If Breacher would land on the enemy's current tile,
-	# stop one tile before it.
-	if head_on_target and destination == head_on_target.grid_position:
-		destination -= direction
-
-	unit.grid_position = destination
-	unit.global_position = grid.tiles[destination].global_position + Vector2(32, 32)
-	for target in targets:
-		target.take_damage(damage)
-		var displacement := get_displacement_direction_from_position(start_position, target, direction)
-		var new_position: Vector2i
-		if displacement == direction:
-			# Head-on targets are launched 2 tiles beyond Breacher's landing position.
-			new_position = destination + direction * 2
+			var desired_position := destination + direction * 2
+			var push_distance := maxi(0, _forward_distance(target.grid_position, desired_position, direction))
+			for _step in range(push_distance):
+				var next_position := target.grid_position + direction
+				if not grid.tiles.has(next_position) or grid.is_tile_occupied(next_position, target):
+					break
+				_move_target_to_tile(grid, target, next_position)
 		else:
-			new_position = target.grid_position + displacement
-		if grid.tiles.has(new_position):
-			target.grid_position = new_position
-			target.global_position = grid.tiles[new_position].global_position + Vector2(32, 32)
+			var next_position := target.grid_position + displacement
+			if grid.tiles.has(next_position) and not grid.is_tile_occupied(next_position, target):
+				_move_target_to_tile(grid, target, next_position)
 		target.shake()
+	while destination != start_position and grid.is_tile_occupied(destination, unit):
+		destination -= direction
+	unit.grid_position = destination
+	unit.global_position = grid.get_tile_center(destination)
+	Crater_Maker.new().clear_hazards_and_objects(grid, target_positions)
+
+
+func _move_target_to_tile(grid: GridField, target: Unit, tile_position: Vector2i) -> void:
+	target.grid_position = tile_position
+	target.global_position = grid.get_tile_center(tile_position)
+
+
+func _forward_distance(from_position: Vector2i, to_position: Vector2i, direction: Vector2i) -> int:
+	var offset := to_position - from_position
+	return offset.x * direction.x + offset.y * direction.y
 		
 func get_displacement_direction_from_position(start_position: Vector2i, target: Unit, direction: Vector2i) -> Vector2i:
 	if direction == Vector2i.UP or direction == Vector2i.DOWN:
