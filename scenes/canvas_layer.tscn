@@ -171,9 +171,9 @@ script = ExtResource("3_top_hud")
 layout_mode = 3
 anchors_preset = 0
 offset_left = 20.0
-offset_top = 80.0
+offset_top = 160.0
 offset_right = 232.0
-offset_bottom = 310.0
+offset_bottom = 390.0
 mouse_filter = 2
 script = ExtResource("5_team_hud")
 

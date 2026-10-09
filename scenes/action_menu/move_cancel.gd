@@ -21,6 +21,17 @@ func _input(event: InputEvent) -> void:
 			return
 		get_viewport().set_input_as_handled()
 		if event.pressed:
+			var grid: GridField = null
+			var ancestor := get_parent()
+			while ancestor != null:
+				if ancestor is GridField:
+					grid = ancestor
+					break
+				ancestor = ancestor.get_parent()
+			if grid != null:
+				if grid.is_radial_click_blocked():
+					return
+				grid.block_radial_clicks()
 			cancel_pressed.emit()
 
 func _draw() -> void:

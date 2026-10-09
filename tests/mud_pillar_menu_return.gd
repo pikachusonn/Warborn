@@ -27,6 +27,12 @@ func run() -> void:
 	assert(not grid.target_tiles.is_empty())
 	var target: Vector2i = grid.target_tiles[0].grid_position
 	await mud_pillar.on_tile_clicked(grid, quagmire_unit, target)
+	for _turn in range(5):
+		await mud_pillar.on_owner_turn_start(grid)
+	assert(mud_pillar.active_pillars.has(target), "Pillars should not expire on caster turns")
+	assert(grid.movement_blockers.has(target))
+	mud_pillar.remove_pillar(grid, target)
+	assert(not mud_pillar.active_pillars.has(target) and not grid.movement_blockers.has(target))
 	assert(not grid.targeting_skill)
 	assert(grid.radial_skills_open)
 	assert(grid.radial_menu.get_node("WheelBackGround").visible)

@@ -52,7 +52,8 @@ func capture() -> Dictionary:
 			var tile: TileScene = grid.tiles[Vector2i(x, y)]
 			tile_states.append([tile.modulate, tile.quagmire_overlay.visible,
 				tile.quagmire_overlay.texture.resource_path if tile.quagmire_overlay.texture else "",
-				tile.quagmire_overlay.modulate, tile.aoe_overlay.visible, tile.aoe_base_color])
+				tile.quagmire_overlay.modulate, tile.aoe_overlay.visible, tile.aoe_base_color,
+				tile.highlight_color])
 	state["tiles"] = tile_states
 	state["markers"] = _capture_markers()
 	if grid.capture_zone != null:
@@ -171,6 +172,7 @@ func apply(state: Dictionary) -> void:
 			tile.aoe_overlay.visible = data[4]
 			tile.aoe_base_color = data[5]
 			tile.aoe_overlay.color = data[5]
+			tile.highlight_color = data[6]
 			tile.queue_redraw()
 	grid.update_radial_menu()
 	if grid.active_unit:

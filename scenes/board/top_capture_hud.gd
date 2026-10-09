@@ -6,14 +6,18 @@ var grid: GridField = null
 
 # Node references
 var panel: PanelContainer
+var left_box: MarginContainer
 var round_label: Label
 var turn_order_row: HBoxContainer
 var unit_order_nodes: Array[Dictionary] = []
+var previous_count_label: Label
+var later_count_label: Label
 
 var player_label: Label
 var enemy_label: Label
 var player_points_container: HBoxContainer
 var enemy_points_container: HBoxContainer
+var progress_row: HBoxContainer
 var status_label: Label
 var step_nodes: Array[Control] = []
 var step_labels: Array[Label] = []
@@ -29,6 +33,7 @@ const COLOR_NEUTRAL_TEXT := Color(0.65, 0.7, 0.78, 1.0)
 const COLOR_ROUND_TEXT := Color(1.0, 0.86, 0.35, 1.0)
 const COLOR_ACTIVE_BORDER := Color(1.0, 0.88, 0.25, 1.0)
 const COLOR_DEFEATED_BORDER := Color(0.25, 0.25, 0.28, 0.4)
+const VISIBLE_TURNS := 4
 
 class PointBall extends Control:
 	var filled := false
@@ -95,31 +100,32 @@ func _build_ui() -> void:
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
 	z_index = 0
 
-	var center_box := CenterContainer.new()
-	center_box.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	center_box.offset_top = 4
-	center_box.offset_bottom = 92
-	center_box.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	center_box.mouse_filter = MOUSE_FILTER_IGNORE
-	add_child(center_box)
+	left_box = MarginContainer.new()
+	left_box.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	left_box.offset_left = 20
+	left_box.offset_top = 4
+	left_box.offset_right = 232
+	left_box.offset_bottom = 148
+	left_box.mouse_filter = MOUSE_FILTER_IGNORE
+	add_child(left_box)
 
 	panel = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(490, 84)
+	panel.custom_minimum_size = Vector2(212, 144)
 	var panel_style := StyleBoxFlat.new()
 	panel_style.bg_color = Color(0.12, 0.14, 0.18, 0.82)
 	panel_style.set_border_width_all(1)
 	panel_style.border_color = Color(0.25, 0.3, 0.4, 0.5)
 	panel_style.set_corner_radius_all(10)
-	panel_style.content_margin_left = 20
-	panel_style.content_margin_right = 20
+	panel_style.content_margin_left = 10
+	panel_style.content_margin_right = 10
 	panel_style.content_margin_top = 6
 	panel_style.content_margin_bottom = 6
 	panel.add_theme_stylebox_override("panel", panel_style)
 	panel.mouse_filter = MOUSE_FILTER_IGNORE
-	center_box.add_child(panel)
+	left_box.add_child(panel)
 
 	var panel_vbox := VBoxContainer.new()
-	panel_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	panel_vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
 	panel_vbox.add_theme_constant_override("separation", 4)
 	panel_vbox.mouse_filter = MOUSE_FILTER_IGNORE
 	panel.add_child(panel_vbox)
@@ -141,29 +147,22 @@ func _build_ui() -> void:
 	round_label.mouse_filter = MOUSE_FILTER_IGNORE
 	initiative_row.add_child(round_label)
 
-	var sep_label := Label.new()
-	sep_label.text = "•"
-	sep_label.add_theme_font_size_override("font_size", 11)
-	sep_label.add_theme_color_override("font_color", Color(0.4, 0.45, 0.55, 0.7))
-	sep_label.mouse_filter = MOUSE_FILTER_IGNORE
-	initiative_row.add_child(sep_label)
-
 	turn_order_row = HBoxContainer.new()
 	turn_order_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	turn_order_row.add_theme_constant_override("separation", 5)
+	turn_order_row.add_theme_constant_override("separation", 3)
 	turn_order_row.mouse_filter = MOUSE_FILTER_IGNORE
-	initiative_row.add_child(turn_order_row)
+	panel_vbox.add_child(turn_order_row)
 
 	# --- Tier 2: Existing Scoreboard & Capture Zone Status ---
 	var main_row := HBoxContainer.new()
-	main_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	main_row.add_theme_constant_override("separation", 20)
+	main_row.add_theme_constant_override("separation", 4)
+	main_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	main_row.mouse_filter = MOUSE_FILTER_IGNORE
 	panel_vbox.add_child(main_row)
 
 	# Left Section: Player Team & Points
 	var player_box := VBoxContainer.new()
-	player_box.custom_minimum_size.x = 80
+	player_box.custom_minimum_size.x = 44
 	player_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	player_box.add_theme_constant_override("separation", 4)
 	player_box.mouse_filter = MOUSE_FILTER_IGNORE
@@ -173,32 +172,32 @@ func _build_ui() -> void:
 	player_label.text = "ALLIES"
 	player_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	player_label.add_theme_color_override("font_color", COLOR_PLAYER)
-	player_label.add_theme_font_size_override("font_size", 14)
+	player_label.add_theme_font_size_override("font_size", 11)
 	player_box.add_child(player_label)
 
 	player_points_container = HBoxContainer.new()
 	player_points_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	player_points_container.add_theme_constant_override("separation", 6)
+	player_points_container.add_theme_constant_override("separation", 4)
 	player_points_container.mouse_filter = MOUSE_FILTER_IGNORE
 	for i in range(2):
-		var ball := PointBall.new(16.0)
+		var ball := PointBall.new(14.0)
 		ball.set_state(false, COLOR_PLAYER, COLOR_PLAYER_DIM)
 		player_points_container.add_child(ball)
 	player_box.add_child(player_points_container)
 
-	# Center Section: 3-step Capture Progress
-	var center_col := VBoxContainer.new()
-	center_col.custom_minimum_size.x = 230
-	center_col.alignment = BoxContainer.ALIGNMENT_CENTER
-	center_col.add_theme_constant_override("separation", 3)
-	center_col.mouse_filter = MOUSE_FILTER_IGNORE
-	main_row.add_child(center_col)
+	var score_spacer := Control.new()
+	score_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	score_spacer.mouse_filter = MOUSE_FILTER_IGNORE
+	main_row.add_child(score_spacer)
 
-	var progress_row := HBoxContainer.new()
+	# Capture progress sits below the scores and stretches across the panel.
+
+	progress_row = HBoxContainer.new()
 	progress_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	progress_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	progress_row.add_theme_constant_override("separation", 0)
 	progress_row.mouse_filter = MOUSE_FILTER_IGNORE
-	center_col.add_child(progress_row)
+	panel_vbox.add_child(progress_row)
 
 	step_nodes.clear()
 	step_lines.clear()
@@ -206,13 +205,14 @@ func _build_ui() -> void:
 	for i in range(3):
 		if i > 0:
 			var line := ColorRect.new()
-			line.custom_minimum_size = Vector2(28, 3)
+			line.custom_minimum_size = Vector2(4, 3)
+			line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			line.color = Color(0.3, 0.35, 0.45, 0.5)
 			line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			progress_row.add_child(line)
 			step_lines.append(line)
 
-		var pip := StepPip.new(18.0)
+		var pip := StepPip.new(14.0)
 		progress_row.add_child(pip)
 		step_nodes.append(pip)
 
@@ -221,11 +221,11 @@ func _build_ui() -> void:
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status_label.add_theme_font_size_override("font_size", 10)
 	status_label.add_theme_color_override("font_color", COLOR_NEUTRAL_TEXT)
-	center_col.add_child(status_label)
+	panel_vbox.add_child(status_label)
 
 	# Right Section: Enemy Team & Points
 	var enemy_box := VBoxContainer.new()
-	enemy_box.custom_minimum_size.x = 80
+	enemy_box.custom_minimum_size.x = 54
 	enemy_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	enemy_box.add_theme_constant_override("separation", 4)
 	enemy_box.mouse_filter = MOUSE_FILTER_IGNORE
@@ -235,15 +235,15 @@ func _build_ui() -> void:
 	enemy_label.text = "ENEMIES"
 	enemy_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	enemy_label.add_theme_color_override("font_color", COLOR_ENEMY)
-	enemy_label.add_theme_font_size_override("font_size", 14)
+	enemy_label.add_theme_font_size_override("font_size", 11)
 	enemy_box.add_child(enemy_label)
 
 	enemy_points_container = HBoxContainer.new()
 	enemy_points_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	enemy_points_container.add_theme_constant_override("separation", 6)
+	enemy_points_container.add_theme_constant_override("separation", 4)
 	enemy_points_container.mouse_filter = MOUSE_FILTER_IGNORE
 	for i in range(2):
-		var ball := PointBall.new(16.0)
+		var ball := PointBall.new(14.0)
 		ball.set_state(false, COLOR_ENEMY, COLOR_ENEMY_DIM)
 		enemy_points_container.add_child(ball)
 	enemy_box.add_child(enemy_points_container)
@@ -270,6 +270,8 @@ func _rebuild_turn_order_ribbon() -> void:
 
 	if grid == null or grid.turn_order.is_empty():
 		return
+	previous_count_label = _make_hidden_count_label()
+	turn_order_row.add_child(previous_count_label)
 
 	for i in range(grid.turn_order.size()):
 		var unit: Unit = grid.turn_order[i]
@@ -277,7 +279,7 @@ func _rebuild_turn_order_ribbon() -> void:
 			continue
 
 		var icon_panel := PanelContainer.new()
-		icon_panel.custom_minimum_size = Vector2(24, 24)
+		icon_panel.custom_minimum_size = Vector2(18, 18)
 		icon_panel.mouse_filter = MOUSE_FILTER_IGNORE
 
 		var border_style := StyleBoxFlat.new()
@@ -290,7 +292,7 @@ func _rebuild_turn_order_ribbon() -> void:
 		icon_panel.add_theme_stylebox_override("panel", border_style)
 
 		var icon_rect := TextureRect.new()
-		icon_rect.custom_minimum_size = Vector2(24, 24)
+		icon_rect.custom_minimum_size = Vector2(18, 18)
 		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon_rect.mouse_filter = MOUSE_FILTER_IGNORE
@@ -306,6 +308,18 @@ func _rebuild_turn_order_ribbon() -> void:
 			"icon_rect": icon_rect,
 			"team_color": team_color
 		})
+	later_count_label = _make_hidden_count_label()
+	turn_order_row.add_child(later_count_label)
+
+func _make_hidden_count_label() -> Label:
+	var label := Label.new()
+	label.custom_minimum_size.x = 22
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_color_override("font_color", COLOR_NEUTRAL_TEXT)
+	label.mouse_filter = MOUSE_FILTER_IGNORE
+	label.visible = false
+	return label
 
 func _process(_delta: float) -> void:
 	if grid == null:
@@ -315,6 +329,11 @@ func _process(_delta: float) -> void:
 
 	if grid == null:
 		return
+	var session := get_node_or_null("/root/Netplay")
+	var top_offset := 56.0 if session != null and session.is_networked() else 4.0
+	if left_box.offset_top != top_offset:
+		left_box.offset_top = top_offset
+		left_box.offset_bottom = top_offset + 144.0
 
 	# Update Round text
 	if round_label:
@@ -323,10 +342,19 @@ func _process(_delta: float) -> void:
 	# Check if turn ribbon needs rebuilding
 	if unit_order_nodes.size() != grid.turn_order.size() or unit_order_nodes.is_empty():
 		_rebuild_turn_order_ribbon()
+	var first_visible := clampi(grid.turn_index - 1, 0, maxi(0, unit_order_nodes.size() - VISIBLE_TURNS))
+	var last_visible := mini(unit_order_nodes.size(), first_visible + VISIBLE_TURNS)
+	if previous_count_label != null:
+		previous_count_label.visible = first_visible > 0
+		previous_count_label.text = "+%d" % first_visible
+	if later_count_label != null:
+		later_count_label.visible = last_visible < unit_order_nodes.size()
+		later_count_label.text = "+%d" % (unit_order_nodes.size() - last_visible)
 
 	# Update turn ribbon items
 	for i in range(unit_order_nodes.size()):
 		var slot_data: Dictionary = unit_order_nodes[i]
+		slot_data.panel.visible = i >= first_visible and i < last_visible
 		var unit: Unit = slot_data.unit
 		if not is_instance_valid(unit):
 			continue

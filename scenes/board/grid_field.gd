@@ -9,6 +9,11 @@ const TILE_SIZE := 64
 const BAKED_BOARD_ORIGIN := Vector2(488.0, 99.0)
 const BAKED_BOARD_SIZE := Vector2(696.0, 716.0)
 const BAKED_BACKGROUND_SIZE := Vector2(1672.0, 941.0)
+const VISIBLE_BOARD_TILES_Y := 7.0
+const ORIGINAL_BOARD_HEIGHT_RATIO := 0.80
+const CAMERA_FOLLOW_SPEED := 4.0
+const CAMERA_MOVE_LEAD_SECONDS := 0.16
+const RADIAL_CLICK_DELAY_MS := 220
 
 static func is_mobile() -> bool:
 	return OS.has_feature("mobile") or OS.get_name() in ["Android", "iOS"] or DisplayServer.is_touchscreen_available()
@@ -56,6 +61,7 @@ var resolving_turn_start := false
 var presenting_skill := false
 var radial_skills_open := false
 var radial_menu_owner: Unit
+var radial_click_block_until_ms := 0
 var network_handler_busy := false
 var remote_skill_availability: Array[bool] = []
 # ================================
@@ -106,6 +112,13 @@ var team_health_hud: TeamHealthHUD = null
 @onready var radial_menu_layer: CanvasLayer = $RadialMenuLayer
 @onready var radial_menu: Node2D = $RadialMenuLayer/RadialActionMenu
 @onready var cavern_background: TextureRect = $BackgroundLayer/CavernBackground
+@onready var background_layer: CanvasLayer = $BackgroundLayer
+var camera_focus_position := Vector2.INF
+var camera_has_focused_unit := false
+var camera_lead_unit: Unit
+var camera_lead_position := Vector2.ZERO
+var camera_move_pending := false
+var force_full_board_zoom := false
 
 func _ready() -> void:
 	update_board_layout()
@@ -206,7 +219,7 @@ func _ready() -> void:
 func open_radial_skills() -> void:
 	if netplay.intercept("skills"):
 		return
-	if resolving_turn_start or not is_instance_valid(active_unit):
+	if resolving_turn_start or camera_move_pending or not is_instance_valid(active_unit):
 		return
 	if active_skill != null:
 		return
@@ -248,7 +261,7 @@ func has_usable_skill() -> bool:
 func cancel_radial_movement() -> void:
 	if netplay.intercept("cancel"):
 		return
-	if resolving_turn_start:
+	if resolving_turn_start or camera_move_pending:
 		return
 	if active_skill != null and not targeting_skill:
 		return
@@ -267,7 +280,7 @@ func cancel_radial_movement() -> void:
 func handle_radial_move() -> void:
 	if netplay.intercept("move"):
 		return
-	if resolving_turn_start or not is_instance_valid(active_unit):
+	if resolving_turn_start or camera_move_pending or not is_instance_valid(active_unit):
 		return
 	if active_unit.is_defeated() or (energy <= 0 and not free_movement):
 		return
@@ -283,7 +296,7 @@ func handle_radial_move() -> void:
 func handle_radial_end_turn() -> void:
 	if netplay.intercept("end"):
 		return
-	if resolving_turn_start or not is_instance_valid(active_unit):
+	if resolving_turn_start or camera_move_pending or not is_instance_valid(active_unit):
 		return
 	# Don't interrupt a skill that is already playing its attack presentation.
 	if active_skill != null and not targeting_skill:
@@ -297,20 +310,28 @@ func handle_radial_end_turn() -> void:
 
 func update_board_layout() -> void:
 	var viewport_size := get_viewport_rect().size
-	var board_size := viewport_size.y * 0.80
-	var board_screen_position := Vector2((viewport_size.x - board_size) / 2.0, viewport_size.y * 0.135)
-	scale = Vector2.ONE * board_size / (HEIGHT * TILE_SIZE)
-	# Leave 13.5% above the board to give comfortable breathing room below the scoreboard.
-	position = board_screen_position
-	# Fit the baked board in the arena art to the logical board exactly. Scaling
-	# the full image to the viewport made the two grids drift at non-16:9 sizes.
-	var background_scale := Vector2.ONE * board_size / BAKED_BOARD_SIZE
-	cavern_background.position = board_screen_position - BAKED_BOARD_ORIGIN * background_scale
-	cavern_background.size = BAKED_BACKGROUND_SIZE * background_scale
+	var board_scale := get_camera_board_scale(viewport_size)
+	scale = Vector2.ONE * board_scale
 	# Both peers retain the same logical coordinates. Only the guest's view rotates.
 	rotation = PI if netplay.is_client() else 0.0
-	if netplay.is_client():
-		position += Vector2.ONE * board_size
+	var focus := get_camera_target_position()
+	position = viewport_size / 2.0 - focus.rotated(rotation) * board_scale
+	camera_focus_position = focus
+	if is_instance_valid(active_unit):
+		camera_has_focused_unit = true
+	# The artwork follows the board transform, including the guest's rotation.
+	# Scale each axis to its baked grid span so targeting tiles line up with the art.
+	# Uncovered edges stay dark.
+	var artwork_scale := Vector2(WIDTH * TILE_SIZE, HEIGHT * TILE_SIZE) / BAKED_BOARD_SIZE
+	cavern_background.position = -BAKED_BOARD_ORIGIN * artwork_scale
+	cavern_background.size = BAKED_BACKGROUND_SIZE * artwork_scale
+	# The guest's logical board turns around, but the scenery keeps its ceiling
+	# above the floor and mirrors left-to-right from the other perspective.
+	cavern_background.flip_v = netplay.is_client()
+	if cavern_background.flip_v:
+		var space_below_board := BAKED_BACKGROUND_SIZE.y - BAKED_BOARD_ORIGIN.y - BAKED_BOARD_SIZE.y
+		cavern_background.position.y = -space_below_board * artwork_scale.y
+	background_layer.transform = transform
 	# CanvasLayer ordering is required for the menu to draw above the HUD, but
 	# CanvasLayers do not inherit their Node2D parent's transform. Mirror the
 	# board transform so the menu remains centered on its unit.
@@ -319,6 +340,71 @@ func update_board_layout() -> void:
 		if child is Unit:
 			child.rotation = -rotation
 	radial_menu.rotation = -rotation
+
+func get_camera_target_position() -> Vector2:
+	if force_full_board_zoom or is_full_board_camera_active():
+		return Vector2(WIDTH * TILE_SIZE, HEIGHT * TILE_SIZE) / 2.0
+	if is_instance_valid(active_unit):
+		if camera_lead_unit == active_unit:
+			return camera_lead_position
+		return active_unit.position
+	return Vector2(WIDTH * TILE_SIZE, HEIGHT * TILE_SIZE) / 2.0
+
+func is_full_board_camera_active() -> bool:
+	if not is_instance_valid(active_unit):
+		return false
+	for skill in active_unit.skills:
+		if skill is Piercing_shot or skill is Mud_Pillar:
+			return true
+	return false
+
+func lead_camera_to_tile(unit: Unit, tile_position: Vector2i) -> void:
+	if unit == active_unit and tiles.has(tile_position):
+		camera_lead_unit = unit
+		camera_lead_position = (Vector2(tile_position) + Vector2.ONE * 0.5) * TILE_SIZE
+
+func clear_camera_lead(unit: Unit) -> void:
+	if camera_lead_unit == unit:
+		camera_lead_unit = null
+
+func update_camera_follow(delta: float) -> void:
+	if camera_focus_position == Vector2.INF or (is_instance_valid(active_unit) and not camera_has_focused_unit):
+		update_board_layout()
+		return
+	var viewport_size := get_viewport_rect().size
+	var blend := 1.0 - exp(-CAMERA_FOLLOW_SPEED * delta)
+	camera_focus_position = camera_focus_position.lerp(get_camera_target_position(), blend)
+	var board_scale := lerpf(scale.x, get_camera_board_scale(viewport_size), blend)
+	scale = Vector2.ONE * board_scale
+	position = viewport_size / 2.0 - camera_focus_position.rotated(rotation) * board_scale
+	background_layer.transform = transform
+	radial_menu_layer.transform = transform
+
+func get_camera_board_scale(viewport_size: Vector2) -> float:
+	var original_scale := viewport_size.y * ORIGINAL_BOARD_HEIGHT_RATIO / (HEIGHT * TILE_SIZE)
+	if not is_instance_valid(active_unit):
+		return original_scale
+	if force_full_board_zoom or is_full_board_camera_active():
+		return original_scale
+	var reach := get_unit_mobility(active_unit) + get_camera_attack_range(active_unit)
+	# Keep one tile of space beyond the farthest movement-plus-attack reach.
+	var visible_tiles := maxf(VISIBLE_BOARD_TILES_Y, 2.0 * float(reach + 1))
+	return maxf(original_scale, viewport_size.y / (visible_tiles * TILE_SIZE))
+
+func get_camera_attack_range(unit: Unit) -> int:
+	var farthest := 1
+	for skill in unit.skills:
+		if skill is Piercing_shot or skill is Hunter_kit or skill is ShiftingSand or skill is Rend:
+			return maxi(WIDTH, HEIGHT) - 1
+		if skill is Chop:
+			farthest = maxi(farthest, 5) # Enhanced Chop.
+		elif skill is Crater_Maker:
+			farthest = maxi(farthest, skill.leap_distance + 1) # Impact radius.
+		elif skill is Unstoppable_force or skill is Mud_Pillar:
+			farthest = maxi(farthest, 3)
+		elif skill is OdinBlessing:
+			farthest = maxi(farthest, OdinBlessing.TARGET_RADIUS)
+	return farthest
 
 func has_aoe_at(grid_pos: Vector2i) -> bool:
 	if not tiles.has(grid_pos):
@@ -346,6 +432,9 @@ func _update_mobile_long_touch() -> void:
 			clear_hover()
 
 func _input(event: InputEvent) -> void:
+	if is_radial_click_blocked() and ((event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT) or event is InputEventScreenTouch):
+		get_viewport().set_input_as_handled()
+		return
 	if not is_mobile():
 		return
 	if event is InputEventScreenTouch:
@@ -377,6 +466,7 @@ func _input(event: InputEvent) -> void:
 		mobile_touch_screen_pos = get_canvas_transform().affine_inverse() * event.position
 
 func _process(_delta: float) -> void:
+	update_camera_follow(_delta)
 	if is_mobile():
 		_update_mobile_long_touch()
 	update_radial_menu()
@@ -506,6 +596,9 @@ func update_radial_menu() -> void:
 	resources.visible = not presenting_skill and not skill_resolving
 	resources.set_resources(energy > 0, free_movement)
 	var wheel = radial_menu.get_node("WheelBackGround")
+	var next_wheel_visible := not moving and not targeting_skill and not presenting_skill and not skill_resolving
+	if wheel.skills_mode != radial_skills_open or wheel.visible != next_wheel_visible:
+		block_radial_clicks()
 	wheel.set_skills_mode(radial_skills_open)
 	var in_zone := capture_zone.is_inside_capture_zone(active_unit.grid_position) if (is_instance_valid(active_unit) and capture_zone != null) else false
 	var can_cap := capture_zone.can_unit_capture(active_unit) if (is_instance_valid(active_unit) and capture_zone != null) else false
@@ -515,7 +608,7 @@ func update_radial_menu() -> void:
 		for index in range(4):
 			availability.append(can_use_skill(index))
 	wheel.set_skill_availability(availability)
-	wheel.visible = not moving and not targeting_skill and not presenting_skill and not skill_resolving
+	wheel.visible = next_wheel_visible
 	for node_name in ["Action", "Move", "EndTurn", "Capture"]:
 		var btn = radial_menu.get_node_or_null(node_name)
 		if btn:
@@ -523,6 +616,12 @@ func update_radial_menu() -> void:
 			if node_name == "Capture":
 				should_show = should_show and in_zone
 			btn.visible = should_show
+
+func block_radial_clicks() -> void:
+	radial_click_block_until_ms = Time.get_ticks_msec() + RADIAL_CLICK_DELAY_MS
+
+func is_radial_click_blocked() -> bool:
+	return Time.get_ticks_msec() < radial_click_block_until_ms
 
 func update_health_previews() -> void:
 	var preview_positions: Array[Vector2i] = []
@@ -677,6 +776,8 @@ func show_impact_preview(positions: Array[Vector2i]) -> void:
 		impact_preview_tiles.append(tile)
 		
 func move_unit(unit: Unit, target_pos: Vector2i):
+	if camera_move_pending:
+		return
 	if not tiles.has(target_pos):
 		return
 	if is_tile_occupied(target_pos, unit):
@@ -688,9 +789,18 @@ func move_unit(unit: Unit, target_pos: Vector2i):
 		energy -= 1
 	else:
 		return
-	
+	camera_move_pending = true
+	if not is_full_board_camera_active():
+		lead_camera_to_tile(unit, target_pos)
+		await get_tree().create_timer(CAMERA_MOVE_LEAD_SECONDS).timeout
+	if not is_instance_valid(unit) or active_unit != unit:
+		clear_camera_lead(unit)
+		camera_move_pending = false
+		return
 	unit.grid_position = target_pos
 	unit.position = (Vector2(target_pos) * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2))
+	clear_camera_lead(unit)
+	camera_move_pending = false
 	for skill in unit.skills:
 		if skill is Bullwark:
 			skill.update_position(self)
@@ -732,7 +842,7 @@ func handle_unit_clicked(unit: Unit):
 	# Target clicks are handled by the tile below the unit, as in local targeting.
 	if netplay.is_networked():
 		return
-	if resolving_turn_start:
+	if resolving_turn_start or camera_move_pending:
 		return
 	if(targeting_skill):
 		return
@@ -748,6 +858,8 @@ func handle_unit_clicked(unit: Unit):
 func handle_tile_clicked(pos: Vector2i):
 	if netplay.intercept("tile", -1, pos):
 		return
+	if camera_move_pending:
+		return
 	if not tiles.has(pos):
 		return
 	if resolving_turn_start:
@@ -761,7 +873,7 @@ func handle_tile_clicked(pos: Vector2i):
 		return;
 	match current_action:
 		Action.MOVE:
-			move_unit(active_unit, pos)
+			await move_unit(active_unit, pos)
 			current_action = Action.NONE
 			unit_panel.clear_skill_active()
 		_:
@@ -868,7 +980,7 @@ func show_affected_tiles(target_positions: Array[Vector2i]):
 func handle_move_pressed(is_skill = false): 
 	if not is_skill and netplay.intercept("move"):
 		return
-	if resolving_turn_start:
+	if resolving_turn_start or camera_move_pending:
 		return
 	if active_unit == null:
 		return
@@ -884,7 +996,7 @@ func handle_move_pressed(is_skill = false):
 func handle_skill_pressed(skill_number: int, action: Action):
 	if netplay.intercept("skill", skill_number):
 		return
-	if resolving_turn_start:
+	if resolving_turn_start or camera_move_pending:
 		return
 	if active_unit == null:
 		return

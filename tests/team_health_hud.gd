@@ -23,6 +23,13 @@ func run() -> void:
 	var enemy_hud := grid.get_node("CanvasLayer/EnemyTeamHealthHUD") as TeamHealthHUD
 	enemy_hud._process(0.016)
 	assert(enemy_hud.visible)
+	assert(hud.zoom_button != null and enemy_hud.zoom_button == null)
+	assert(hud.zoom_button.position.y >= hud.rows_container.position.y + hud.rows_container.size.y)
+	hud.zoom_button.pressed.emit()
+	assert(grid.force_full_board_zoom and hud.zoom_button.text == "Default zoom")
+	var other_view := GridField.new()
+	assert(not other_view.force_full_board_zoom, "Zoom is local to each board instance")
+	other_view.free()
 	assert(hud.get_team_units() == grid.player_units)
 	assert(enemy_hud.get_team_units() == grid.enemy_units)
 	assert(enemy_hud.position.x > root.size.x / 2.0)
@@ -34,7 +41,8 @@ func run() -> void:
 	# Test 2: In multiplayer Host mode, HUD shows player_units
 	session.mode = session.Mode.HOST
 	enemy_hud._process(0.016)
-	assert(not enemy_hud.visible, "Extra enemy HUD is only shown in local play")
+	assert(enemy_hud.visible, "Enemy HUD must remain visible in multiplayer")
+	assert(enemy_hud.get_team_units() == grid.enemy_units)
 	hud._process(0.016)
 	assert(hud.visible, "HUD must be visible in multiplayer mode")
 	var team_units := hud.get_team_units()
@@ -81,7 +89,12 @@ func run() -> void:
 	session.mode = session.Mode.CLIENT
 	hud._process(0.016)
 	assert(hud.visible, "HUD must be visible in client multiplayer mode")
+	assert(grid.force_full_board_zoom, "Local zoom choice survives multiplayer role updates")
+	hud.zoom_button.pressed.emit()
+	assert(not grid.force_full_board_zoom and hud.zoom_button.text == "Full board view")
 	var client_team := hud.get_team_units()
+	enemy_hud._process(0.016)
+	assert(enemy_hud.visible and enemy_hud.get_team_units() == grid.player_units, "Guest enemy HUD must show the host team")
 	assert(client_team.size() == 4, "Client team should have 4 units")
 	for i in range(4):
 		assert(client_team[i] == grid.enemy_units[i], "Client team should match enemy_units")

@@ -24,7 +24,7 @@ func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
 	cooldown_remaining = cooldown
 	match stage:
 		Stage.MOVE:
-			handle_move_stage(grid_field, unit, pos)
+			await handle_move_stage(grid_field, unit, pos)
 		Stage.SHOT:
 			await handle_shot_stage(grid_field, unit, pos)
 			
@@ -35,8 +35,12 @@ func handle_move_stage(grid_field: GridField, unit: Unit, pos: Vector2i):
 	if tile not in grid_field.target_tiles:
 		return
 	# Move
+	if not grid_field.is_huntress_camera_active():
+		grid_field.lead_camera_to_tile(unit, pos)
+		await grid_field.get_tree().create_timer(GridField.CAMERA_MOVE_LEAD_SECONDS).timeout
 	unit.grid_position = pos
 	unit.global_position = grid_field.get_tile_center(pos)
+	grid_field.clear_camera_lead(unit)
 	#Clear preview
 	grid_field.clear_move_range()
 	stage = Stage.SHOT

@@ -54,6 +54,10 @@ func on_tile_clicked(
 		return
 
 	grid_field.targeting_skill = false
+	var landing_position := unit.grid_position + direction * distance
+	while not grid_field.tiles.has(landing_position) and landing_position != unit.grid_position:
+		landing_position -= direction
+	grid_field.lead_camera_to_tile(unit, landing_position)
 
 	await grid_field.play_skill_presentation(
 		self,
@@ -61,6 +65,7 @@ func on_tile_clicked(
 	)
 
 	await execute(grid_field, unit, target_positions, direction, distance)
+	grid_field.clear_camera_lead(unit)
 	cooldown_remaining = cooldown
 	grid_field.energy -= 1
 	grid_field.unit_panel.update_energy(grid_field.energy)

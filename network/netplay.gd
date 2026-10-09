@@ -1,7 +1,7 @@
 extends Node
 ## Host-authoritative combat. Clients send intent and render primitive snapshots.
 const PORT := 27841
-const PROTOCOL := 4
+const PROTOCOL := 5
 const CONNECTION_TIMEOUT := 10.0
 enum Mode { LOCAL, HOST, CLIENT }
 var mode := Mode.LOCAL

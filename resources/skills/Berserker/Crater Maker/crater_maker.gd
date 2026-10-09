@@ -142,11 +142,15 @@ func on_tile_clicked(
 
 	grid_field.targeting_skill = false
 	grid_field.clear_skill_state()
+	grid_field.lead_camera_to_tile(unit, pos)
+	await grid_field.get_tree().create_timer(GridField.CAMERA_MOVE_LEAD_SECONDS).timeout
 	unit.grid_position = pos
 	var tween := unit.create_tween()
 
-	tween.tween_property(unit, "global_position", grid_field.get_tile_center(pos), 0.1)
+	# Animate in board coordinates: the camera can move while the leap is playing.
+	tween.tween_property(unit, "position", (Vector2(pos) + Vector2.ONE * 0.5) * GridField.TILE_SIZE, 0.1)
 	await tween.finished
+	grid_field.clear_camera_lead(unit)
 	var impact_tiles := get_impact_tiles(grid_field, unit.grid_position)
 	await grid_field.play_skill_presentation(self, impact_tiles)
 	execute(grid_field, unit, impact_tiles, Vector2i.ZERO, leap_distance)

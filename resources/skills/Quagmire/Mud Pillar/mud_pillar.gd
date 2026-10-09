@@ -3,9 +3,7 @@ class_name Mud_Pillar
 
 var owner: Unit = null
 var active_pillars: Dictionary[Vector2i, Node2D] = {}
-var pillar_rounds: Dictionary[Vector2i, int] = {}
 var max_pillars := 3
-var pillar_duration := 3
 var range := 5
 
 func has_usable_target(_unit: Unit) -> bool:
@@ -59,7 +57,6 @@ func execute(grid_field: GridField, unit: Unit, target_positions: Array[Vector2i
 		return
 	# add movement blocker to grid
 	create_pillar_visual(grid_field, pos)
-	pillar_rounds[pos] = pillar_duration
 	
 func create_pillar_visual(grid_field: GridField, pos: Vector2i) -> void:
 	if not grid_field.tiles.has(pos):
@@ -80,16 +77,6 @@ func remove_pillar(grid_field: GridField, pos: Vector2i) -> void:
 		if is_instance_valid(pillar):
 			pillar.queue_free()
 	active_pillars.erase(pos)
-	pillar_rounds.erase(pos)
-
-func on_owner_turn_start(grid_field: GridField) -> void:
-	var expired: Array[Vector2i] = []
-	for pos in pillar_rounds:
-		pillar_rounds[pos] -= 1
-		if pillar_rounds[pos] <= 0:
-			expired.append(pos)
-	for pos in expired:
-		remove_pillar(grid_field, pos)
 		
 func highlight_pillar(pos: Vector2i, value: bool) -> void:
 	if not active_pillars.has(pos):

@@ -33,7 +33,8 @@ func run() -> void:
 		assert(is_zero_approx(unit.global_rotation), "Unit art and labels must stay upright")
 		var logical := grid.to_local(unit.global_position) / GridField.TILE_SIZE
 		assert(Vector2i(logical.floor()) == unit.grid_position, "View transform must preserve logical coordinates")
-	assert(is_zero_approx(grid.radial_menu.global_rotation))
+	# CanvasLayer transforms do not appear in Node2D.global_rotation.
+	assert(is_zero_approx((grid.radial_menu_layer.transform * grid.radial_menu.transform).get_rotation()))
 	var active := grid.active_unit
 	var turn := grid.turn_index
 	if client:

@@ -8,6 +8,7 @@ var grid: GridField = null
 var panel: PanelContainer
 var header_label: Label
 var rows_container: VBoxContainer
+var zoom_button: Button
 
 var unit_rows: Array[Dictionary] = []
 
@@ -36,10 +37,10 @@ func _build_ui() -> void:
 		anchor_right = 1.0
 		offset_left = -232.0
 		offset_right = -20.0
-		offset_top = 80.0
-		offset_bottom = 310.0
+		offset_top = 160.0
+		offset_bottom = 390.0
 	else:
-		position = Vector2(20, 80)
+		position = Vector2(20, 160)
 	custom_minimum_size = Vector2(212, 0)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -76,13 +77,40 @@ func _build_ui() -> void:
 	rows_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rows_container.add_theme_constant_override("separation", 8)
 	main_vbox.add_child(rows_container)
+	if not enemy_team:
+		zoom_button = Button.new()
+		zoom_button.name = "ZoomToggleButton"
+		zoom_button.custom_minimum_size = Vector2(190, 30)
+		zoom_button.focus_mode = Control.FOCUS_NONE
+		zoom_button.mouse_filter = Control.MOUSE_FILTER_STOP
+		zoom_button.text = "Full board view"
+		var button_style := StyleBoxFlat.new()
+		button_style.bg_color = Color(0.16, 0.22, 0.31, 0.95)
+		button_style.border_color = COLOR_BORDER_DEFAULT
+		button_style.set_border_width_all(1)
+		button_style.set_corner_radius_all(5)
+		zoom_button.add_theme_stylebox_override("normal", button_style)
+		var hover_style := button_style.duplicate() as StyleBoxFlat
+		hover_style.bg_color = Color(0.23, 0.33, 0.45, 1.0)
+		zoom_button.add_theme_stylebox_override("hover", hover_style)
+		zoom_button.pressed.connect(_on_zoom_button_pressed)
+		main_vbox.add_child(zoom_button)
+
+func _on_zoom_button_pressed() -> void:
+	if is_instance_valid(grid):
+		grid.force_full_board_zoom = not grid.force_full_board_zoom
+		_update_zoom_button_text()
+
+func _update_zoom_button_text() -> void:
+	if zoom_button != null and is_instance_valid(grid):
+		zoom_button.text = "Default zoom" if grid.force_full_board_zoom else "Full board view"
 
 func get_team_units() -> Array[Unit]:
 	if not is_instance_valid(grid):
 		return []
 	var session := get_node_or_null("/root/Netplay")
 	var is_client: bool = session != null and session.is_client()
-	var source: Array[Unit] = grid.enemy_units if enemy_team or is_client else grid.player_units
+	var source: Array[Unit] = grid.enemy_units if enemy_team != is_client else grid.player_units
 	var result: Array[Unit] = []
 	for u in source:
 		if is_instance_valid(u):
@@ -223,9 +251,11 @@ func _create_unit_row(unit: Unit) -> Dictionary:
 func _process(_delta: float) -> void:
 	var session := get_node_or_null("/root/Netplay")
 	var is_networked: bool = session != null and session.is_networked()
-	visible = is_instance_valid(grid) and (not enemy_team or not is_networked)
+	visible = is_instance_valid(grid)
 	if not visible:
 		return
+	position.y = 212.0 if is_networked else 160.0
+	_update_zoom_button_text()
 	header_label.text = "ENEMY TEAM" if enemy_team else ("YOUR TEAM" if is_networked else "PLAYER TEAM")
 
 	var current_team := get_team_units()

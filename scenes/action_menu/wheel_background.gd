@@ -177,6 +177,11 @@ func _input(event: InputEvent) -> void:
 		# Consume the click before the grid or a unit underneath receives it.
 		get_viewport().set_input_as_handled()
 		if event.pressed:
+			var grid := get_grid()
+			if grid != null:
+				if grid.is_radial_click_blocked():
+					return
+				grid.block_radial_clicks()
 			if skills_mode:
 				if is_segment_available(segment):
 					skill_pressed.emit(3 - segment)
