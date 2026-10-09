@@ -4,7 +4,7 @@ class_name Cleave
 const HEALING_TIERS := [0.0, 0.50, 0.55, 0.70, 0.85, 1.0]
 
 func get_stack_healing(stacks: int) -> int:
-	return 5 + 5 * stacks if stacks > 0 else 0
+	return 10 + 5 * stacks
 
 func begin(
 	grid_field: GridField,

@@ -13,7 +13,7 @@
 [ext_resource type="Texture2D" path="res://assets/terrain/cavern_abyss_board_straight.png" id="10_cavern_bg"]
 
 [sub_resource type="Shader" id="Shader_background_lighting"]
-code = "shader_type canvas_item;\n\nuniform vec2 light_center = vec2(0.5, 0.48);\nuniform float center_alpha : hint_range(0.0, 1.0) = 0.55;\nuniform float edge_alpha : hint_range(0.0, 1.0) = 0.78;\nuniform float glow_radius : hint_range(0.05, 1.0) = 0.24;\nuniform float falloff_end : hint_range(0.05, 1.5) = 0.72;\n\nvoid fragment() {\n\tvec2 offset = UV - light_center;\n\toffset.x *= SCREEN_PIXEL_SIZE.y / SCREEN_PIXEL_SIZE.x;\n\tfloat distance_from_light = length(offset);\n\tfloat vignette = smoothstep(glow_radius, falloff_end, distance_from_light);\n\tfloat veil_alpha = mix(center_alpha, edge_alpha, vignette);\n\tvec3 cool_black = mix(vec3(0.012, 0.018, 0.04), vec3(0.002, 0.003, 0.008), vignette);\n\tCOLOR = vec4(cool_black, veil_alpha);\n}\n"
+code = "shader_type canvas_item;\n\nuniform vec2 light_center = vec2(0.5, 0.48565);\nuniform vec2 light_scale = vec2(1.15, 1.0);\nuniform float inner_radius : hint_range(0.0, 1.0) = 0.20;\nuniform float mid_radius : hint_range(0.0, 1.0) = 0.44;\nuniform float outer_radius : hint_range(0.0, 1.5) = 0.72;\nuniform float mid_darkness : hint_range(0.0, 1.0) = 0.25;\nuniform float edge_darkness : hint_range(0.0, 1.0) = 1.0;\nuniform vec4 veil_color : source_color = vec4(0.035, 0.043, 0.065, 1.0);\n\nuniform vec2 top_fade_range = vec2(0.015, 0.08);\nuniform vec2 bottom_fade_range = vec2(0.92, 0.985);\nuniform vec2 left_fade_range = vec2(0.015, 0.06);\nuniform vec2 right_fade_range = vec2(0.94, 0.985);\n\nvoid fragment() {\n\tvec2 offset = (UV - light_center) * light_scale;\n\tfloat dist = length(offset);\n\tfloat inner_v = smoothstep(inner_radius, mid_radius, dist) * mid_darkness;\n\tfloat outer_b = smoothstep(mid_radius * 0.9, outer_radius, dist) * (edge_darkness - mid_darkness);\n\tfloat radial = clamp(inner_v + outer_b, 0.0, edge_darkness);\n\n\tfloat fade_t = 1.0 - smoothstep(top_fade_range.x, top_fade_range.y, UV.y);\n\tfloat fade_b = smoothstep(bottom_fade_range.x, bottom_fade_range.y, UV.y);\n\tfloat fade_l = 1.0 - smoothstep(left_fade_range.x, left_fade_range.y, UV.x);\n\tfloat fade_r = smoothstep(right_fade_range.x, right_fade_range.y, UV.x);\n\tfloat edge_fade = max(max(fade_t, fade_b), max(fade_l, fade_r));\n\n\tfloat alpha = clamp(max(radial, edge_fade), 0.0, 1.0);\n\tCOLOR = vec4(veil_color.rgb, alpha * veil_color.a);\n}\n"
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_background_lighting"]
 shader = SubResource("Shader_background_lighting")
@@ -49,13 +49,7 @@ expand_mode = 1
 stretch_mode = 0
 
 [node name="BackgroundVeil" type="ColorRect" parent="BackgroundLayer"]
-visible = false
 material = SubResource("ShaderMaterial_background_lighting")
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 1)
 

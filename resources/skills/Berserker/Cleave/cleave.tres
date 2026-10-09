@@ -5,6 +5,6 @@
 [resource]
 script = ExtResource("1_cleave")
 skill_name = "Cleave"
-description = "Strike enemies in a 3×1 arc and heal for 5 + 5 × Blood Lust stacks (10–30 HP). Consecutive use becomes Enhanced Cleave: hits 3×3 around Berserker, healing the same base amount plus 50–100% of actual HP damage dealt."
+description = "Strike enemies in a 3×1 arc and heal for 10 + 5 × Blood Lust stacks (10–35 HP). Consecutive use becomes Enhanced Cleave: hits 3×3 around Berserker, healing the same base amount plus 50–100% of actual HP damage dealt."
 damage = 20
 metadata/_custom_type_script = "uid://dblpll6i7rksl"

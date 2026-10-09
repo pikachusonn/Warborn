@@ -105,20 +105,30 @@ var win_reason: String = ""
 var top_capture_hud: TopCaptureHUD = null
 var match_end_modal: MatchEndModal = null
 var team_health_hud: TeamHealthHUD = null
+var offscreen_hud: OffscreenHUD = null
 
 @onready var netplay: Node = get_node("/root/Netplay")
 @onready var unit_panel: UnitPanel = $CanvasLayer/BottomHUD
 @onready var skill_cutscene: Control = $CanvasLayer/SkillCutscene
 @onready var radial_menu_layer: CanvasLayer = $RadialMenuLayer
 @onready var radial_menu: Node2D = $RadialMenuLayer/RadialActionMenu
+@onready var radial_wheel: Node2D = $RadialMenuLayer/RadialActionMenu/WheelBackGround
+@onready var radial_cancel: Node2D = $RadialMenuLayer/RadialActionMenu/MoveCancel
+@onready var radial_resources: Node2D = $RadialMenuLayer/RadialActionMenu/TurnResources
 @onready var cavern_background: TextureRect = $BackgroundLayer/CavernBackground
+@onready var background_veil: ColorRect = $BackgroundLayer.get_node_or_null("BackgroundVeil")
 @onready var background_layer: CanvasLayer = $BackgroundLayer
 var camera_focus_position := Vector2.INF
 var camera_has_focused_unit := false
 var camera_lead_unit: Unit
 var camera_lead_position := Vector2.ZERO
 var camera_move_pending := false
-var force_full_board_zoom := false
+var force_full_board_zoom := false:
+	set(value):
+		if force_full_board_zoom != value:
+			force_full_board_zoom = value
+			if is_instance_valid(offscreen_hud):
+				offscreen_hud.on_zoom_changed()
 
 func _ready() -> void:
 	update_board_layout()
@@ -197,6 +207,13 @@ func _ready() -> void:
 		enemy_health_hud.enemy_team = true
 		$CanvasLayer.add_child(enemy_health_hud)
 	enemy_health_hud.setup(self)
+	offscreen_hud = $CanvasLayer.get_node_or_null("OffscreenHUD") as OffscreenHUD
+	if offscreen_hud == null and has_node("CanvasLayer"):
+		offscreen_hud = preload("res://scenes/board/offscreen_hud.gd").new()
+		offscreen_hud.name = "OffscreenHUD"
+		$CanvasLayer.add_child(offscreen_hud)
+	if offscreen_hud:
+		offscreen_hud.setup(self)
 
 	unit_panel.move_pressed.connect(handle_move_pressed)
 	unit_panel.skill1_pressed.connect(handle_skill_pressed.bind(0, Action.SKILL1))
@@ -205,12 +222,12 @@ func _ready() -> void:
 	unit_panel.skill4_pressed.connect(handle_skill_pressed.bind(3, Action.SKILL4))
 	unit_panel.capture_pressed.connect(handle_radial_capture)
 	unit_panel.end_turn_pressed.connect(handle_radial_end_turn)
-	radial_menu.get_node("WheelBackGround").end_turn_pressed.connect(handle_radial_end_turn)
-	radial_menu.get_node("WheelBackGround").move_pressed.connect(handle_radial_move)
-	radial_menu.get_node("WheelBackGround").action_pressed.connect(open_radial_skills)
-	radial_menu.get_node("WheelBackGround").skill_pressed.connect(select_radial_skill)
-	radial_menu.get_node("WheelBackGround").capture_pressed.connect(handle_radial_capture)
-	radial_menu.get_node("MoveCancel").cancel_pressed.connect(cancel_radial_movement)
+	radial_wheel.end_turn_pressed.connect(handle_radial_end_turn)
+	radial_wheel.move_pressed.connect(handle_radial_move)
+	radial_wheel.action_pressed.connect(open_radial_skills)
+	radial_wheel.skill_pressed.connect(select_radial_skill)
+	radial_wheel.capture_pressed.connect(handle_radial_capture)
+	radial_cancel.cancel_pressed.connect(cancel_radial_movement)
 	if netplay.is_networked():
 		netplay.attach_board(self)
 	else:
@@ -331,6 +348,13 @@ func update_board_layout() -> void:
 	if cavern_background.flip_v:
 		var space_below_board := BAKED_BACKGROUND_SIZE.y - BAKED_BOARD_ORIGIN.y - BAKED_BOARD_SIZE.y
 		cavern_background.position.y = -space_below_board * artwork_scale.y
+	if is_instance_valid(background_veil):
+		background_veil.position = cavern_background.position
+		background_veil.size = cavern_background.size
+		var mat := background_veil.material as ShaderMaterial
+		if mat:
+			var center_v := (1.0 - 0.48565) if netplay.is_client() else 0.48565
+			mat.set_shader_parameter("light_center", Vector2(0.5, center_v))
 	background_layer.transform = transform
 	# CanvasLayer ordering is required for the menu to draw above the HUD, but
 	# CanvasLayers do not inherit their Node2D parent's transform. Mirror the
@@ -340,6 +364,8 @@ func update_board_layout() -> void:
 		if child is Unit:
 			child.rotation = -rotation
 	radial_menu.rotation = -rotation
+	if offscreen_hud:
+		offscreen_hud.refresh_indicators()
 
 func get_camera_target_position() -> Vector2:
 	if force_full_board_zoom or is_full_board_camera_active():
@@ -362,10 +388,14 @@ func lead_camera_to_tile(unit: Unit, tile_position: Vector2i) -> void:
 	if unit == active_unit and tiles.has(tile_position):
 		camera_lead_unit = unit
 		camera_lead_position = (Vector2(tile_position) + Vector2.ONE * 0.5) * TILE_SIZE
+		if offscreen_hud:
+			offscreen_hud.request_refresh()
 
 func clear_camera_lead(unit: Unit) -> void:
 	if camera_lead_unit == unit:
 		camera_lead_unit = null
+		if offscreen_hud:
+			offscreen_hud.request_refresh()
 
 func update_camera_follow(delta: float) -> void:
 	if camera_focus_position == Vector2.INF or (is_instance_valid(active_unit) and not camera_has_focused_unit):
@@ -501,6 +531,11 @@ func _process(_delta: float) -> void:
 func is_sharing_target_preview() -> bool:
 	return targeting_skill or current_action == Action.MOVE
 
+func get_local_mouse_board_position() -> Vector2:
+	if is_mobile() and mobile_touch_active:
+		return mobile_touch_screen_pos
+	return get_global_mouse_position()
+
 func get_target_mouse_position() -> Vector2:
 	if netplay.is_networked() and (netplay.dispatching or netplay.executing_command or not netplay.owns_turn()):
 		return to_global(netplay.pointer)
@@ -546,7 +581,7 @@ func refresh_remote_target_preview(cursor: Vector2) -> void:
 	hovered_tile = previous_hovered_tile
 
 func update_local_hover() -> void:
-	var local_mouse := to_local(get_target_mouse_position())
+	var local_mouse := to_local(get_local_mouse_board_position())
 	var grid_pos := Vector2i(floori(local_mouse.x / TILE_SIZE), floori(local_mouse.y / TILE_SIZE))
 	if not tiles.has(grid_pos):
 		clear_hover()
@@ -591,28 +626,26 @@ func update_radial_menu() -> void:
 		return
 	radial_menu.show()
 	radial_menu.position = active_unit.position
-	radial_menu.get_node("MoveCancel").visible = cancel_visible
-	var resources = radial_menu.get_node("TurnResources")
-	resources.visible = not presenting_skill and not skill_resolving
-	resources.set_resources(energy > 0, free_movement)
-	var wheel = radial_menu.get_node("WheelBackGround")
+	radial_cancel.visible = cancel_visible
+	radial_resources.visible = not presenting_skill and not skill_resolving
+	radial_resources.set_resources(energy > 0, free_movement)
 	var next_wheel_visible := not moving and not targeting_skill and not presenting_skill and not skill_resolving
-	if wheel.skills_mode != radial_skills_open or wheel.visible != next_wheel_visible:
+	if radial_wheel.skills_mode != radial_skills_open or radial_wheel.visible != next_wheel_visible:
 		block_radial_clicks()
-	wheel.set_skills_mode(radial_skills_open)
+	radial_wheel.set_skills_mode(radial_skills_open)
 	var in_zone := capture_zone.is_inside_capture_zone(active_unit.grid_position) if (is_instance_valid(active_unit) and capture_zone != null) else false
 	var can_cap := capture_zone.can_unit_capture(active_unit) if (is_instance_valid(active_unit) and capture_zone != null) else false
-	wheel.set_capture_mode(in_zone, can_cap)
+	radial_wheel.set_capture_mode(in_zone, can_cap)
 	var availability: Array[bool] = []
 	if radial_skills_open:
 		for index in range(4):
 			availability.append(can_use_skill(index))
-	wheel.set_skill_availability(availability)
-	wheel.visible = next_wheel_visible
+	radial_wheel.set_skill_availability(availability)
+	radial_wheel.visible = next_wheel_visible
 	for node_name in ["Action", "Move", "EndTurn", "Capture"]:
 		var btn = radial_menu.get_node_or_null(node_name)
 		if btn:
-			var should_show = wheel.visible and not radial_skills_open
+			var should_show = radial_wheel.visible and not radial_skills_open
 			if node_name == "Capture":
 				should_show = should_show and in_zone
 			btn.visible = should_show
@@ -740,12 +773,22 @@ func spawn_character(data: UnitData, pos: Vector2i, side: Unit.Side):
 	unit_instance.rotation = -rotation
 	unit_instance.play_spawn_effect()
 	unit_instance.click_area.unit_clicked.connect(handle_unit_clicked)
-	unit_instance.position_changed.connect(capture_zone.on_unit_position_changed)
-	unit_instance.defeated.connect(capture_zone.on_unit_defeated)
+	unit_instance.position_changed.connect(_on_unit_position_changed)
+	unit_instance.defeated.connect(_on_unit_defeated)
 	if side == Unit.Side.PLAYER:
 		player_units.append(unit_instance)
 	else:
 		enemy_units.append(unit_instance)
+
+func _on_unit_position_changed(unit: Unit) -> void:
+	capture_zone.on_unit_position_changed(unit)
+	if unit == active_unit and offscreen_hud:
+		offscreen_hud.on_active_unit_moved(unit)
+
+func _on_unit_defeated(unit: Unit) -> void:
+	capture_zone.on_unit_defeated(unit)
+	if offscreen_hud:
+		offscreen_hud.refresh_indicators()
 	
 func spawn_team(team):
 	for character in team:
@@ -755,8 +798,8 @@ func spawn_team(team):
 		spawn_character(data, pos, side)
 		
 func get_mouse_grid_position() -> Vector2i:
-	var mouse_position := to_local(get_target_mouse_position())
-	return Vector2i(floori(mouse_position.x / 64.0), floori(mouse_position.y / 64.0))
+	var mouse_position := to_local(get_local_mouse_board_position())
+	return Vector2i(floori(mouse_position.x / TILE_SIZE), floori(mouse_position.y / TILE_SIZE))
 	
 func clear_impact_preview() -> void:
 	for tile in impact_preview_tiles:
@@ -801,6 +844,8 @@ func move_unit(unit: Unit, target_pos: Vector2i):
 	unit.position = (Vector2(target_pos) * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2))
 	clear_camera_lead(unit)
 	camera_move_pending = false
+	if offscreen_hud:
+		offscreen_hud.on_active_unit_moved(unit)
 	for skill in unit.skills:
 		if skill is Bullwark:
 			skill.update_position(self)
@@ -820,6 +865,8 @@ func end_turn():
 	if active_unit:
 		active_unit.set_selected(false)
 	active_unit = null
+	if offscreen_hud:
+		offscreen_hud.refresh_indicators()
 	unit_panel.hide()
 	if not advance_to_next_living_unit():
 		update_unit_visuals()
@@ -854,6 +901,8 @@ func handle_unit_clicked(unit: Unit):
 	unit_panel.show_unit(unit)
 	unit_panel.update_energy(energy)
 	active_unit.set_selected(true)
+	if offscreen_hud:
+		offscreen_hud.on_turn_started(unit)
 	
 func handle_tile_clicked(pos: Vector2i):
 	if netplay.intercept("tile", -1, pos):
@@ -1161,6 +1210,8 @@ func start_unit_turn(unit: Unit):
 		return
 	resolving_turn_start = true
 	active_unit = unit
+	if offscreen_hud:
+		offscreen_hud.on_turn_started(unit)
 	active_unit.clear_temp_health()
 	for skill in unit.skills:
 		await skill.on_owner_turn_start(self)
@@ -1192,6 +1243,8 @@ func start_unit_turn(unit: Unit):
 	unit_panel.update_energy(energy)
 	update_unit_visuals()
 	unit_panel.show_unit(unit)
+	if offscreen_hud:
+		offscreen_hud.on_turn_started(unit)
 
 func add_projectile_blocker(tile: Vector2i, blocker):
 	projectile_blockers[tile] = blocker

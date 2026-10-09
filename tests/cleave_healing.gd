@@ -43,18 +43,18 @@ func _ready() -> void:
 	grid.active_skill.damage = 25
 	grid.targeting_skill = true
 	grid.update_health_previews()
-	assert(caster.shown_healing == 0, "First Cleave grants its stack only after healing")
+	assert(caster.shown_healing == 10, "First Cleave heals base amount and grants its stack only after healing")
 	assert(enemy.shown_healing == 0 and enemy.shown_damage == 25)
 	var positions: Array[Vector2i] = [enemy.grid_position]
 	grid.active_skill.execute(grid, caster, positions, Vector2i.UP, 1)
-	assert(caster.current_health == 40 and enemy.current_health == 75)
+	assert(caster.current_health == 50 and enemy.current_health == 75)
 	assert(passive.stacks == 1, "First Cleave grants one stack")
 	enemy.temp_health = 10
 	grid.update_health_previews()
-	assert(caster.shown_healing == 18, "Enhanced healing uses HP damage after shields")
+	assert(caster.shown_healing == 23, "Enhanced healing uses HP damage after shields")
 	assert(enemy.shown_healing == 0)
 	grid.active_skill.execute(grid, caster, positions, Vector2i.UP, 1)
-	assert(caster.current_health == 58 and enemy.current_health == 60)
+	assert(caster.current_health == 73 and enemy.current_health == 60)
 	assert(passive.stacks == 0)
 	caster.heal(1000)
 	assert(caster.current_health == caster.data.health)
@@ -64,11 +64,11 @@ func _ready() -> void:
 	assert(passive.stacks == 1 and enemy.current_health == 40)
 	caster.current_health = 40
 	grid.update_health_previews()
-	assert(caster.shown_healing == 10 and enemy.shown_healing == 0)
+	assert(caster.shown_healing == 15 and enemy.shown_healing == 0)
 	grid.active_skill.execute(grid, caster, positions, Vector2i.UP, 1)
-	assert(passive.stacks == 2 and caster.current_health == 50)
+	assert(passive.stacks == 2 and caster.current_health == 55)
 	grid.active_skill.damage = 20
-	var expected_heals := [0, 20, 26, 34, 42, 50]
+	var expected_heals := [0, 25, 31, 39, 47, 55]
 	for stacks in range(1, 6):
 		passive.stacks = stacks
 		passive.last_attack = "cleave"
@@ -80,7 +80,7 @@ func _ready() -> void:
 		assert(caster.shown_healing == expected_healing)
 		grid.active_skill.execute(grid, caster, positions, Vector2i.UP, 1)
 		assert(caster.current_health == 1 + expected_healing)
-	var expected_base_heals := [0, 10, 15, 20, 25, 30]
+	var expected_base_heals := [10, 15, 20, 25, 30, 35]
 	for stacks in range(1, 6):
 		passive.stacks = stacks
 		passive.last_attack = "chop"

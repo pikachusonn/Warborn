@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://bep6dpfyjrqtr" path="res://scenes/board/top_capture_hud.gd" id="3_top_hud"]
 [ext_resource type="Script" uid="uid://dkplgts8t5gq7" path="res://scenes/board/match_end_modal.gd" id="4_modal"]
 [ext_resource type="Script" uid="uid://c4q0l7oc4oflj" path="res://scenes/board/team_health_hud.gd" id="5_team_hud"]
+[ext_resource type="Script" uid="uid://cnmtwmsfh8d2p" path="res://scenes/board/offscreen_hud.gd" id="6_offscreen"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_health_background"]
 bg_color = Color(0.1584723, 0.15847233, 0.1584723, 1)
@@ -176,6 +177,16 @@ offset_right = 232.0
 offset_bottom = 390.0
 mouse_filter = 2
 script = ExtResource("5_team_hud")
+
+[node name="OffscreenHUD" type="Control" parent="." unique_id=1598759671]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("6_offscreen")
 
 [node name="MatchEndModal" type="Control" parent="." unique_id=1598759669]
 visible = false

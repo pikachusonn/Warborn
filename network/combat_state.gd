@@ -89,7 +89,10 @@ func _positions(tiles: Array) -> Array[Vector2i]:
 func apply(state: Dictionary) -> void:
 	var combat: Dictionary = state.combat
 	var units: Array = grid.player_units + grid.enemy_units
+	var previous_active: Unit = grid.active_unit
 	grid.active_unit = units[combat.active] if combat.active >= 0 else null
+	if previous_active != grid.active_unit and is_instance_valid(grid.offscreen_hud):
+		grid.offscreen_hud.on_turn_started(grid.active_unit)
 	grid.radial_menu_owner = grid.active_unit
 	grid.turn_index = combat.turn
 	if combat.has("round"):
@@ -243,8 +246,10 @@ func set_replica_zone_hover(positions: Array[Vector2i]) -> void:
 
 func update_health_display() -> void:
 	# Mirror shared combat feedback, while allowing private local unit inspection.
-	var local_mouse := grid.to_local(grid.get_target_mouse_position())
+	var local_mouse := grid.to_local(grid.get_local_mouse_board_position())
 	var hovered_tile := Vector2i((local_mouse / GridField.TILE_SIZE).floor())
+	if not grid.tiles.has(hovered_tile):
+		hovered_tile = Vector2i(-1000, -1000)
 	for unit: Unit in grid.player_units + grid.enemy_units:
 		if not health_views.has(unit.network_id):
 			continue
