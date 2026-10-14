@@ -54,7 +54,7 @@ func update_preview(grid_field: GridField, _unit: Unit) -> void:
 func update_pillar_preview(grid_field: GridField) -> void:
 	var mouse_pos := grid_field.get_target_mouse_position()
 	var local_mouse := grid_field.to_local(mouse_pos)
-	var grid_pos := Vector2i(local_mouse / GridField.TILE_SIZE)
+	var grid_pos := grid_field.local_to_grid(local_mouse)
 
 	if not mud_pillar_skill.active_pillars.has(grid_pos):
 		if hovered_pillar != Vector2i(-1, -1):

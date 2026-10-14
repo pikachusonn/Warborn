@@ -36,13 +36,15 @@ var pulse_time: float = 0.0
 func _ready() -> void:
 	fill_layer = Node2D.new()
 	fill_layer.name = "CaptureFillLayer"
+	# Zone artwork belongs on the ground plane. Units use z-index 2/3, so both
+	# the fill and luminous border must remain below every character texture.
 	fill_layer.z_index = 1
 	fill_layer.draw.connect(_draw_fill)
 	add_child(fill_layer)
 
 	border_layer = Node2D.new()
 	border_layer.name = "CaptureBorderLayer"
-	border_layer.z_index = 4
+	border_layer.z_index = 1
 	border_layer.draw.connect(_draw_border)
 	add_child(border_layer)
 
@@ -50,7 +52,7 @@ func _draw_fill() -> void:
 	if not is_instance_valid(fill_layer):
 		return
 	var fill_color := get_current_fill_color()
-	fill_layer.draw_rect(ZONE_RECT, fill_color, true)
+	fill_layer.draw_colored_polygon(get_zone_polygon(), fill_color)
 
 func _draw_border() -> void:
 	if not is_instance_valid(border_layer):
@@ -59,15 +61,34 @@ func _draw_border() -> void:
 	var base_alpha := 0.75
 	if state == CaptureState.CAPTURING:
 		base_alpha = 0.65 + 0.25 * sin(pulse_time * 4.5)
+	var outline := get_zone_outline()
 
 	# Wide soft outer glow (18px)
-	border_layer.draw_rect(ZONE_RECT, Color(border_color.r, border_color.g, border_color.b, base_alpha * 0.08), false, 18.0)
+	border_layer.draw_polyline(outline, Color(border_color.r, border_color.g, border_color.b, base_alpha * 0.08), 18.0, true)
 	# Mid atmospheric glow (10px)
-	border_layer.draw_rect(ZONE_RECT, Color(border_color.r, border_color.g, border_color.b, base_alpha * 0.18), false, 10.0)
+	border_layer.draw_polyline(outline, Color(border_color.r, border_color.g, border_color.b, base_alpha * 0.18), 10.0, true)
 	# Soft inner glow (5px)
-	border_layer.draw_rect(ZONE_RECT, Color(border_color.r, border_color.g, border_color.b, base_alpha * 0.30), false, 5.0)
+	border_layer.draw_polyline(outline, Color(border_color.r, border_color.g, border_color.b, base_alpha * 0.30), 5.0, true)
 	# Thinned, low-opacity main border line (1.5px, 0.6 alpha)
-	border_layer.draw_rect(ZONE_RECT, Color(border_color.r, border_color.g, border_color.b, base_alpha * 0.60), false, 1.5)
+	border_layer.draw_polyline(outline, Color(border_color.r, border_color.g, border_color.b, base_alpha * 0.60), 1.5, true)
+
+func get_zone_polygon() -> PackedVector2Array:
+	if is_instance_valid(grid_field) and grid_field.has_method("get_capture_zone_polygon"):
+		return grid_field.get_capture_zone_polygon()
+	return PackedVector2Array([
+		ZONE_RECT.position,
+		ZONE_RECT.position + Vector2(ZONE_RECT.size.x, 0.0),
+		ZONE_RECT.end,
+		ZONE_RECT.position + Vector2(0.0, ZONE_RECT.size.y)
+	])
+
+func get_zone_outline() -> PackedVector2Array:
+	var polygon := get_zone_polygon()
+	if polygon.is_empty():
+		return polygon
+	var outline := polygon.duplicate()
+	outline.append(polygon[0])
+	return outline
 
 func _process(delta: float) -> void:
 	if state == CaptureState.CAPTURING:

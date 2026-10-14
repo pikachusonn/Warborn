@@ -33,6 +33,7 @@ var grid_position: Vector2i:
 		if changed:
 			position_changed.emit(self)
 var is_selected := false
+var draw_selection_aura := true
 var status_effects: Dictionary = {}
 var status_tooltip: StatusTooltip
 var health_preview_active := false
@@ -120,7 +121,10 @@ func setup(pos: Vector2i, unit_data: UnitData, unit_side):
 		64.0 / tex_size.x,
 		64.0 / tex_size.y
 	)
-	sprite.scale = Vector2.ONE * scale_factor * 1.8
+	var side_visual_scale := data.ally_visual_scale if side == Side.PLAYER else data.enemy_visual_scale
+	var side_visual_offset := data.ally_visual_offset if side == Side.PLAYER else data.enemy_visual_offset
+	sprite.scale = Vector2.ONE * scale_factor * 1.8 * side_visual_scale
+	sprite.position = side_visual_offset
 
 func play_dust_burst(playback_fps: float = 12.0) -> void:
 	var burst := DUST_BURST.instantiate() as AnimatedSprite2D
@@ -159,7 +163,7 @@ func set_move_targeting(value: bool) -> void:
 		queue_redraw()
 
 func _draw():
-	if not is_selected:
+	if not is_selected or not draw_selection_aura:
 		return
 	# The radial menu draws the red cancellation marker during move targeting.
 	if move_targeting:

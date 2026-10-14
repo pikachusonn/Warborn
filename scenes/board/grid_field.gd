@@ -367,14 +367,25 @@ func update_board_layout() -> void:
 	if offscreen_hud:
 		offscreen_hud.refresh_indicators()
 
+func get_board_center_position() -> Vector2:
+	return Vector2(WIDTH * TILE_SIZE, HEIGHT * TILE_SIZE) / 2.0
+
+func get_tile_local_position(pos: Vector2i) -> Vector2:
+	if tiles.has(pos):
+		return tiles[pos].position + tiles[pos].get_unit_offset()
+	return (Vector2(pos) * TILE_SIZE + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0))
+
+func local_to_grid(local_pos: Vector2) -> Vector2i:
+	return Vector2i(floori(local_pos.x / TILE_SIZE), floori(local_pos.y / TILE_SIZE))
+
 func get_camera_target_position() -> Vector2:
 	if force_full_board_zoom or is_full_board_camera_active():
-		return Vector2(WIDTH * TILE_SIZE, HEIGHT * TILE_SIZE) / 2.0
+		return get_board_center_position()
 	if is_instance_valid(active_unit):
 		if camera_lead_unit == active_unit:
 			return camera_lead_position
 		return active_unit.position
-	return Vector2(WIDTH * TILE_SIZE, HEIGHT * TILE_SIZE) / 2.0
+	return get_board_center_position()
 
 func is_full_board_camera_active() -> bool:
 	if not is_instance_valid(active_unit):
@@ -387,7 +398,7 @@ func is_full_board_camera_active() -> bool:
 func lead_camera_to_tile(unit: Unit, tile_position: Vector2i) -> void:
 	if unit == active_unit and tiles.has(tile_position):
 		camera_lead_unit = unit
-		camera_lead_position = (Vector2(tile_position) + Vector2.ONE * 0.5) * TILE_SIZE
+		camera_lead_position = get_tile_local_position(tile_position)
 		if offscreen_hud:
 			offscreen_hud.request_refresh()
 
@@ -451,7 +462,7 @@ func _update_mobile_long_touch() -> void:
 			clear_hover()
 		return
 	var local_pos := to_local(mobile_touch_screen_pos)
-	var grid_pos := Vector2i(floori(local_pos.x / TILE_SIZE), floori(local_pos.y / TILE_SIZE))
+	var grid_pos := local_to_grid(local_pos)
 	if not is_long_touching_aoe:
 		var elapsed := (Time.get_ticks_msec() / 1000.0) - mobile_touch_start_time
 		if elapsed >= LONG_TOUCH_DURATION and has_aoe_at(grid_pos):
@@ -546,7 +557,7 @@ func get_target_mouse_position() -> Vector2:
 func refresh_target_preview() -> void:
 	var mouse_pos := get_target_mouse_position()
 	var local_mouse = to_local(mouse_pos)
-	var grid_pos = Vector2i(floori(local_mouse.x / TILE_SIZE), floori(local_mouse.y / TILE_SIZE))
+	var grid_pos = local_to_grid(local_mouse)
 	if not tiles.has(grid_pos):
 		suppressed_aoe_hover_tiles.clear()
 		clear_hover()
@@ -573,7 +584,7 @@ func refresh_remote_target_preview(cursor: Vector2) -> void:
 	# Remote aim affects authoritative target/impact data, but never the host's
 	# private tile, character, zone, or cloud hover.
 	var previous_hovered_tile = hovered_tile
-	var grid_pos := Vector2i(floori(cursor.x / TILE_SIZE), floori(cursor.y / TILE_SIZE))
+	var grid_pos := local_to_grid(cursor)
 	hovered_tile = tiles.get(grid_pos)
 	if targeting_skill and active_skill and active_unit:
 		active_skill.update_preview(self, active_unit)
@@ -582,7 +593,7 @@ func refresh_remote_target_preview(cursor: Vector2) -> void:
 
 func update_local_hover() -> void:
 	var local_mouse := to_local(get_local_mouse_board_position())
-	var grid_pos := Vector2i(floori(local_mouse.x / TILE_SIZE), floori(local_mouse.y / TILE_SIZE))
+	var grid_pos := local_to_grid(local_mouse)
 	if not tiles.has(grid_pos):
 		clear_hover()
 		if hovered_unit:
@@ -770,6 +781,7 @@ func spawn_character(data: UnitData, pos: Vector2i, side: Unit.Side):
 		data,
 		side
 	)
+	unit_instance.position = get_tile_local_position(pos)
 	unit_instance.rotation = -rotation
 	unit_instance.play_spawn_effect()
 	unit_instance.click_area.unit_clicked.connect(handle_unit_clicked)
@@ -799,7 +811,7 @@ func spawn_team(team):
 		
 func get_mouse_grid_position() -> Vector2i:
 	var mouse_position := to_local(get_local_mouse_board_position())
-	return Vector2i(floori(mouse_position.x / TILE_SIZE), floori(mouse_position.y / TILE_SIZE))
+	return local_to_grid(mouse_position)
 	
 func clear_impact_preview() -> void:
 	for tile in impact_preview_tiles:
@@ -841,7 +853,7 @@ func move_unit(unit: Unit, target_pos: Vector2i):
 		camera_move_pending = false
 		return
 	unit.grid_position = target_pos
-	unit.position = (Vector2(target_pos) * TILE_SIZE + Vector2(TILE_SIZE / 2, TILE_SIZE / 2))
+	unit.position = get_tile_local_position(target_pos)
 	clear_camera_lead(unit)
 	camera_move_pending = false
 	if offscreen_hud:
@@ -1261,7 +1273,9 @@ func get_projectile_blocker(tile: Vector2i, unit: Unit):
 	return blocker
 
 func get_tile_center(pos: Vector2i) -> Vector2:
-	return tiles[pos].to_global(Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0))
+	if tiles.has(pos):
+		return tiles[pos].to_global(tiles[pos].get_unit_offset())
+	return to_global(get_tile_local_position(pos))
 
 func add_movement_blocker(pos: Vector2i, blocker) -> void:
 	movement_blockers[pos] = blocker

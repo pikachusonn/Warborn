@@ -39,6 +39,7 @@ func _ready() -> void:
 		else:
 			Netplay.join(address.text, int(port.value)))
 	_add_button(column, "Local play", Netplay.local_play)
+	_add_button(column, "Demo (Angled Board)", Netplay.demo_isometric_play)
 	_add_button(column, "Cancel connection", func():
 		Netplay.close_session()
 		message.text = "Connection cancelled.")

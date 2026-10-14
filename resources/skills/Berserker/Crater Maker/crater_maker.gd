@@ -148,7 +148,7 @@ func on_tile_clicked(
 	var tween := unit.create_tween()
 
 	# Animate in board coordinates: the camera can move while the leap is playing.
-	tween.tween_property(unit, "position", (Vector2(pos) + Vector2.ONE * 0.5) * GridField.TILE_SIZE, 0.1)
+	tween.tween_property(unit, "position", grid_field.get_tile_local_position(pos), 0.1)
 	await tween.finished
 	grid_field.clear_camera_lead(unit)
 	var impact_tiles := get_impact_tiles(grid_field, unit.grid_position)

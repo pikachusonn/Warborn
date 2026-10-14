@@ -1,0 +1,24 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/tile/tile_iso.gd" id="1_tile_iso"]
+[ext_resource type="Script" path="res://scenes/tile/click_area.gd" id="2_click_area"]
+
+[node name="TileIso" type="Node2D"]
+script = ExtResource("1_tile_iso")
+
+[node name="ClickArea" type="Area2D" parent="."]
+script = ExtResource("2_click_area")
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="ClickArea"]
+polygon = PackedVector2Array(0, -22, 60, 0, 0, 22, -60, 0)
+
+[node name="QuagmireOverlay" type="Sprite2D" parent="."]
+visible = false
+show_behind_parent = true
+texture_filter = 1
+
+[node name="AoeOverlay" type="Polygon2D" parent="."]
+visible = false
+show_behind_parent = true
+color = Color(0.0745098, 0, 0.0980392, 0.352941)
+polygon = PackedVector2Array(0, -22, 60, 0, 0, 22, -60, 0)

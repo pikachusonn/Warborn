@@ -80,6 +80,10 @@ func local_play() -> void:
 	close_session()
 	get_tree().change_scene_to_file("res://scenes/board/grid_field.tscn")
 
+func demo_isometric_play() -> void:
+	close_session()
+	get_tree().change_scene_to_file("res://scenes/board/grid_field_isometric_demo.tscn")
+
 func close_session() -> void:
 	session_generation += 1
 	revision = 0

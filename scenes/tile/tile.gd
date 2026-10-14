@@ -29,6 +29,9 @@ func set_hovered(val: bool) -> void:
 func setup(cord: Vector2i): 
 	grid_position = cord;
 	position = Vector2(grid_position) * TILE_SIZE;
+
+func get_unit_offset() -> Vector2:
+	return Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0)
 	
 func _draw() -> void:
 	# Neutral tiles draw no fill, leaving the board texture fully visible.

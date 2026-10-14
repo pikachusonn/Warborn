@@ -1,0 +1,53 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scenes/board/grid_field_isometric.gd" id="1_iso_board"]
+[ext_resource type="PackedScene" path="res://scenes/tile/tile_iso.tscn" id="2_iso_tile"]
+[ext_resource type="PackedScene" path="res://scenes/unit/unit.tscn" id="3_unit"]
+[ext_resource type="Resource" path="res://resources/units/Breacher/Breacher.tres" id="4_vlvcf"]
+[ext_resource type="Resource" path="res://resources/units/Archer/Archer.tres" id="5_xmbel"]
+[ext_resource type="Resource" path="res://resources/units/Quagmire/Quagmire.tres" id="6_2lxyn"]
+[ext_resource type="PackedScene" path="res://scenes/canvas_layer.tscn" id="6_canvas"]
+[ext_resource type="Resource" path="res://resources/units/Berserker/Berserker.tres" id="7_bkt86"]
+[ext_resource type="PackedScene" path="res://scenes/action_menu/radial_action_menu.tscn" id="8_radial"]
+[ext_resource type="Texture2D" path="res://assets/terrain/cavern_abyss_board_straight.png" id="10_cavern_bg"]
+
+[node name="GridField" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_iso_board")
+tile_scene = ExtResource("2_iso_tile")
+unit_scene = ExtResource("3_unit")
+breacher_data = ExtResource("4_vlvcf")
+archer_data = ExtResource("5_xmbel")
+quagmire_data = ExtResource("6_2lxyn")
+berserker_data = ExtResource("7_bkt86")
+
+[node name="DarkSpace" type="CanvasLayer" parent="."]
+layer = -11
+
+[node name="Fill" type="ColorRect" parent="DarkSpace"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.015, 0.02, 0.03, 1)
+
+[node name="BackgroundLayer" type="CanvasLayer" parent="."]
+layer = -10
+
+[node name="CavernBackground" type="TextureRect" parent="BackgroundLayer"]
+visible = false
+mouse_filter = 2
+texture = ExtResource("10_cavern_bg")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="CanvasLayer" parent="." instance=ExtResource("6_canvas")]
+
+[node name="RadialMenuLayer" type="CanvasLayer" parent="."]
+layer = 1
+follow_viewport_enabled = true
+
+[node name="RadialActionMenu" parent="RadialMenuLayer" instance=ExtResource("8_radial")]
+z_index = 2000
