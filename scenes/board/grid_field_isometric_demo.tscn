@@ -7,7 +7,7 @@
 [ext_resource type="Resource" path="res://resources/units/Archer/Archer.tres" id="5_xmbel"]
 [ext_resource type="Resource" path="res://resources/units/Quagmire/Quagmire.tres" id="6_2lxyn"]
 [ext_resource type="PackedScene" path="res://scenes/canvas_layer.tscn" id="6_canvas"]
-[ext_resource type="Resource" path="res://resources/units/Berserker/Berserker.tres" id="7_bkt86"]
+[ext_resource type="Resource" path="res://resources/units/Berserker/Berserker_Wolf.tres" id="7_bkt86"]
 [ext_resource type="PackedScene" path="res://scenes/action_menu/radial_action_menu.tscn" id="8_radial"]
 [ext_resource type="Texture2D" path="res://assets/terrain/cavern_abyss_board_straight.png" id="10_cavern_bg"]
 

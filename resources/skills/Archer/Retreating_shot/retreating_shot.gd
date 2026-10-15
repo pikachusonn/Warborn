@@ -21,7 +21,6 @@ func begin(grid_field: GridField, unit: Unit) -> void:
 	grid_field.calculate_move_range(unit, true)
 	
 func on_tile_clicked(grid_field: GridField, unit: Unit, pos: Vector2i) -> void:
-	cooldown_remaining = cooldown
 	match stage:
 		Stage.MOVE:
 			await handle_move_stage(grid_field, unit, pos)
@@ -34,13 +33,19 @@ func handle_move_stage(grid_field: GridField, unit: Unit, pos: Vector2i):
 	var tile = grid_field.tiles[pos]
 	if tile not in grid_field.target_tiles:
 		return
+	cooldown_remaining = cooldown
 	# Move
-	if not grid_field.is_huntress_camera_active():
+	if not grid_field.is_full_board_camera_active():
 		grid_field.lead_camera_to_tile(unit, pos)
 		await grid_field.get_tree().create_timer(GridField.CAMERA_MOVE_LEAD_SECONDS).timeout
 	unit.grid_position = pos
-	unit.global_position = grid_field.get_tile_center(pos)
+	unit.position = grid_field.get_tile_local_position(pos)
 	grid_field.clear_camera_lead(unit)
+	if grid_field.offscreen_hud:
+		grid_field.offscreen_hud.on_active_unit_moved(unit)
+	for skill in unit.skills:
+		if skill is Bullwark:
+			skill.update_position(grid_field)
 	#Clear preview
 	grid_field.clear_move_range()
 	stage = Stage.SHOT
@@ -52,6 +57,8 @@ func update_preview(grid_field: GridField, unit: Unit) -> void:
 
 func handle_shot_stage(grid_field: GridField, unit: Unit, pos: Vector2i):
 	await piercing_shot.on_tile_clicked(grid_field, unit, pos)
+	if piercing_shot.stage != Piercing_shot.Stage.BOUNCE:
+		stage = Stage.MOVE
 	
 func cancel(grid_field: GridField, unit: Unit) -> void:
 	grid_field.clear_move_range()

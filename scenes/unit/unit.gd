@@ -40,6 +40,8 @@ var health_preview_active := false
 var preview_damage := 0
 var preview_healing := 0
 var hovered_for_ui := false
+static var _outline_shader: Shader
+var outline_material: ShaderMaterial
 
 const DEFEATED_OPACITY := 0.5
 const DEFEATED_Z_INDEX := 2
@@ -162,6 +164,94 @@ func set_move_targeting(value: bool) -> void:
 		move_targeting = value
 		queue_redraw()
 
+static func _get_outline_shader() -> Shader:
+	if _outline_shader == null:
+		_outline_shader = Shader.new()
+		_outline_shader.code = """shader_type canvas_item;
+
+uniform vec4 outline_color : source_color = vec4(1.0, 0.15, 0.15, 1.0);
+uniform float width = 4.8;
+uniform vec2 sheet_cells = vec2(1.0, 1.0);
+uniform float sprite_alpha = 1.0;
+
+void fragment() {
+	vec4 col = texture(TEXTURE, UV);
+	if (col.a > 0.15) {
+		COLOR = vec4(col.rgb, col.a * sprite_alpha);
+	} else {
+		vec2 cell_size = 1.0 / sheet_cells;
+		vec2 cell_index = floor(UV * sheet_cells);
+		vec2 min_uv = cell_index * cell_size;
+		vec2 max_uv = min_uv + cell_size;
+
+		vec2 size = TEXTURE_PIXEL_SIZE * width;
+		float max_a = 0.0;
+
+		// 8 directions at distance 1.0
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(size.x, 0.0), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV - vec2(size.x, 0.0), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(0.0, size.y), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV - vec2(0.0, size.y), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(size.x * 0.707, size.y * 0.707), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(-size.x * 0.707, size.y * 0.707), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(size.x * 0.707, -size.y * 0.707), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(-size.x * 0.707, -size.y * 0.707), min_uv, max_uv)).a);
+
+		// 8 directions at distance 0.5
+		vec2 half_size = size * 0.5;
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(half_size.x, 0.0), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV - vec2(half_size.x, 0.0), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(0.0, half_size.y), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV - vec2(0.0, half_size.y), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(half_size.x * 0.707, half_size.y * 0.707), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(-half_size.x * 0.707, half_size.y * 0.707), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(half_size.x * 0.707, -half_size.y * 0.707), min_uv, max_uv)).a);
+		max_a = max(max_a, texture(TEXTURE, clamp(UV + vec2(-half_size.x * 0.707, -half_size.y * 0.707), min_uv, max_uv)).a);
+
+		if (max_a > 0.15) {
+			COLOR = vec4(outline_color.rgb, outline_color.a * min(max_a * 1.5, 1.0));
+		} else {
+			COLOR = vec4(0.0);
+		}
+	}
+}
+"""
+	return _outline_shader
+
+func set_outline_color(color: Color) -> void:
+	if outline_material == null:
+		outline_material = ShaderMaterial.new()
+		outline_material.shader = _get_outline_shader()
+
+	var frame_texture := sprite.sprite_frames.get_frame_texture("idle", 0) if sprite != null and sprite.sprite_frames != null else null
+	var outline_width := 4.8
+	var sheet_cells := Vector2.ONE
+	if frame_texture is AtlasTexture:
+		var atlas_tex := frame_texture as AtlasTexture
+		if atlas_tex.atlas != null and atlas_tex.region.size.x > 0.0 and atlas_tex.region.size.y > 0.0:
+			var full_size := atlas_tex.atlas.get_size()
+			var frame_size := atlas_tex.region.size
+			sheet_cells = Vector2(
+				maxf(1.0, roundf(full_size.x / frame_size.x)),
+				maxf(1.0, roundf(full_size.y / frame_size.y))
+			)
+			outline_width = maxf(4.0, frame_size.y / 40.0)
+	elif frame_texture != null:
+		var tex_h := frame_texture.get_size().y
+		if tex_h > 0.0:
+			outline_width = maxf(4.0, tex_h / 40.0)
+
+	outline_material.set_shader_parameter("outline_color", color)
+	outline_material.set_shader_parameter("width", outline_width)
+	outline_material.set_shader_parameter("sheet_cells", sheet_cells)
+	outline_material.set_shader_parameter("sprite_alpha", sprite.modulate.a if sprite != null else 1.0)
+	if sprite != null and sprite.material != outline_material:
+		sprite.material = outline_material
+
+func clear_outline() -> void:
+	if sprite != null and sprite.material != null:
+		sprite.material = null
+
 func _draw():
 	if not is_selected or not draw_selection_aura:
 		return
@@ -214,13 +304,13 @@ func update_hp_bar() -> void:
 	hp_label.text = "%d/%d" % [real_health + shield_health, max_health]
 
 func show_health_preview(damage_amount: int, healing_amount: int) -> void:
-	clear_health_preview()
 	if is_defeated() or (damage_amount <= 0 and healing_amount <= 0):
+		clear_health_preview()
 		return
 	preview_damage = damage_amount
 	preview_healing = healing_amount
-	update_hp_bar()
 	health_preview_active = true
+	update_hp_bar()
 	update_health_bar_position()
 	hp_bar.show()
 	effects_wrapper.set_position(Vector2i(-32, -82))
@@ -246,15 +336,24 @@ func show_health_preview(damage_amount: int, healing_amount: int) -> void:
 		shield_loss_preview.position = Vector2(remaining_shield_width, 0)
 		shield_loss_preview.size = Vector2(absorbed_width, bar_height)
 		shield_loss_preview.show()
+	else:
+		shield_loss_preview.hide()
+
 	if health_damage > 0:
 		var remaining_health := current_health - health_damage
 		health_loss_preview.position = Vector2(bar_width * float(remaining_health) / float(max_health), 0)
 		health_loss_preview.size = Vector2(bar_width * float(health_damage) / float(max_health), bar_height)
 		health_loss_preview.show()
+	else:
+		health_loss_preview.hide()
+
 	if actual_healing > 0:
 		healing_preview.position = Vector2(bar_width * float(current_health) / float(max_health), 0)
 		healing_preview.size = Vector2(bar_width * float(actual_healing) / float(max_health), bar_height)
 		healing_preview.show()
+	else:
+		healing_preview.hide()
+
 	var actual_damage := shield_absorbed + health_damage
 	if actual_damage > 0:
 		preview_amount_label.text = "-%d" % actual_damage
@@ -264,8 +363,18 @@ func show_health_preview(damage_amount: int, healing_amount: int) -> void:
 		preview_amount_label.text = "+%d" % actual_healing
 		preview_amount_label.modulate = Color(0.38, 0.86, 0.42)
 		preview_amount_label.show()
+	else:
+		preview_amount_label.hide()
+
+	if damage_amount > 0:
+		set_outline_color(Color(1.0, 0.12, 0.12, 1.0))
+	elif healing_amount > 0:
+		set_outline_color(Color(0.12, 1.0, 0.28, 1.0))
+	else:
+		clear_outline()
 
 func clear_health_preview() -> void:
+	clear_outline()
 	preview_damage = 0
 	preview_healing = 0
 	var restore_hp_bar := health_preview_active
@@ -308,9 +417,12 @@ func is_defeated() -> bool:
 	return current_health <= 0
 
 func set_defeated_visual() -> void:
+	clear_outline()
 	is_shaking = false
 	play_dust_burst()
-	modulate.a = DEFEATED_OPACITY
+	modulate.a = 1.0
+	if is_instance_valid(sprite):
+		sprite.modulate.a = DEFEATED_OPACITY
 	z_index = DEFEATED_Z_INDEX
 	set_selected(false)
 	set_hovered(false)

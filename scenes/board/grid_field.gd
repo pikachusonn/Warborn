@@ -14,6 +14,10 @@ const ORIGINAL_BOARD_HEIGHT_RATIO := 0.80
 const CAMERA_FOLLOW_SPEED := 4.0
 const CAMERA_MOVE_LEAD_SECONDS := 0.16
 const RADIAL_CLICK_DELAY_MS := 220
+const PROXIMITY_OPACITY := 0.38
+const PROXIMITY_FADE_SPEED := 7.0
+const AFFECTED_TARGET_OPACITY := 0.50
+const CASTER_TARGETING_LEFT_OPACITY := 0.20
 
 static func is_mobile() -> bool:
 	return OS.has_feature("mobile") or OS.get_name() in ["Android", "iOS"] or DisplayServer.is_touchscreen_available()
@@ -313,7 +317,7 @@ func handle_radial_move() -> void:
 func handle_radial_end_turn() -> void:
 	if netplay.intercept("end"):
 		return
-	if resolving_turn_start or camera_move_pending or not is_instance_valid(active_unit):
+	if resolving_turn_start or camera_move_pending or not is_instance_valid(active_unit) or targeting_skill:
 		return
 	# Don't interrupt a skill that is already playing its attack presentation.
 	if active_skill != null and not targeting_skill:
@@ -394,6 +398,9 @@ func is_full_board_camera_active() -> bool:
 		if skill is Piercing_shot or skill is Mud_Pillar:
 			return true
 	return false
+
+func is_huntress_camera_active() -> bool:
+	return is_full_board_camera_active()
 
 func lead_camera_to_tile(unit: Unit, tile_position: Vector2i) -> void:
 	if unit == active_unit and tiles.has(tile_position):
@@ -508,13 +515,14 @@ func _input(event: InputEvent) -> void:
 
 func _process(_delta: float) -> void:
 	update_camera_follow(_delta)
+	_update_proximity_opacity(_delta)
 	if is_mobile():
 		_update_mobile_long_touch()
 	update_radial_menu()
 	if netplay.is_networked():
 		var enabled: bool = netplay.can_input()
 		unit_panel.move_button.disabled = not enabled or (energy <= 0 and not free_movement)
-		unit_panel.end_turn_button.disabled = not enabled
+		unit_panel.end_turn_button.disabled = not enabled or targeting_skill
 		var buttons := [unit_panel.skill1_button, unit_panel.skill2_button, unit_panel.skill3_button, unit_panel.skill4_button]
 		for index in buttons.size():
 			buttons[index].disabled = not enabled or not can_use_skill(index)
@@ -524,6 +532,7 @@ func _process(_delta: float) -> void:
 			unit_panel.capture_button.visible = in_zone
 			unit_panel.capture_button.disabled = not enabled or not can_cap
 	else:
+		unit_panel.end_turn_button.disabled = targeting_skill
 		if is_instance_valid(unit_panel.capture_button):
 			var in_zone := capture_zone.is_inside_capture_zone(active_unit.grid_position) if is_instance_valid(active_unit) else false
 			var can_cap := capture_zone.can_unit_capture(active_unit) if is_instance_valid(active_unit) else false
@@ -538,6 +547,76 @@ func _process(_delta: float) -> void:
 		update_local_hover()
 		return
 	refresh_target_preview()
+
+func _update_proximity_opacity(delta: float) -> void:
+	var has_active := is_instance_valid(active_unit) and not active_unit.is_defeated()
+	var active_pos := active_unit.position if (has_active and active_unit.position != Vector2.ZERO) else (get_tile_local_position(active_unit.grid_position) if has_active else Vector2.ZERO)
+	var active_grid := active_unit.grid_position if has_active else Vector2i.ZERO
+
+	var targeting_left := false
+	if targeting_skill and has_active:
+		var preview_tiles := impact_preview_tiles if not impact_preview_tiles.is_empty() else target_tiles
+		for t in preview_tiles:
+			if is_instance_valid(t) and tiles.has(t.grid_position):
+				var t_pos := get_tile_local_position(t.grid_position)
+				if t_pos.x < active_pos.x - 5.0:
+					targeting_left = true
+					break
+		if not targeting_left and hovered_tile != null and tiles.has(hovered_tile.grid_position):
+			var h_pos := get_tile_local_position(hovered_tile.grid_position)
+			if h_pos.x < active_pos.x - 5.0:
+				targeting_left = true
+		if not targeting_left and hovered_tile == null:
+			var local_mouse := to_local(get_target_mouse_position())
+			if local_mouse.x < active_pos.x - 10.0:
+				targeting_left = true
+
+	for unit: Unit in player_units + enemy_units:
+		if not is_instance_valid(unit):
+			continue
+		# Ensure unit container and its health bar/UI remain at 100% full opacity.
+		unit.modulate.a = 1.0
+		if not is_instance_valid(unit.sprite):
+			continue
+
+		if unit.is_defeated():
+			unit.sprite.modulate.a = move_toward(unit.sprite.modulate.a, Unit.DEFEATED_OPACITY, delta * PROXIMITY_FADE_SPEED)
+			continue
+
+		if unit == active_unit:
+			# If the caster is targeting the tiles on his left, fade his sprite to 20% so he doesn't hide tiles or targets.
+			var active_target_opacity := 1.0
+			if targeting_skill:
+				if targeting_left:
+					active_target_opacity = CASTER_TARGETING_LEFT_OPACITY
+				elif unit.health_preview_active:
+					active_target_opacity = AFFECTED_TARGET_OPACITY
+			unit.sprite.modulate.a = move_toward(unit.sprite.modulate.a, active_target_opacity, delta * PROXIMITY_FADE_SPEED)
+			if unit.sprite.material is ShaderMaterial:
+				unit.sprite.material.set_shader_parameter("sprite_alpha", unit.sprite.modulate.a)
+			continue
+
+		if not has_active:
+			unit.sprite.modulate.a = move_toward(unit.sprite.modulate.a, 1.0, delta * PROXIMITY_FADE_SPEED)
+			continue
+
+		var u_pos := unit.position if unit.position != Vector2.ZERO else get_tile_local_position(unit.grid_position)
+		var grid_dist := maxi(
+			absi(unit.grid_position.x - active_grid.x),
+			absi(unit.grid_position.y - active_grid.y)
+		)
+		var screen_dist := u_pos.distance_to(active_pos)
+
+		# Characters on adjacent tiles (or within immediate screen overlap distance) become low opacity
+		# so the active character and their tile/action options remain completely unobstructed.
+		var is_close := grid_dist <= 1 or screen_dist <= 135.0
+		var target_opacity := PROXIMITY_OPACITY if is_close else 1.0
+		# The affected opacity should be about 50% when targeted.
+		if targeting_skill and unit.health_preview_active:
+			target_opacity = AFFECTED_TARGET_OPACITY
+		unit.sprite.modulate.a = move_toward(unit.sprite.modulate.a, target_opacity, delta * PROXIMITY_FADE_SPEED)
+		if unit.sprite.material is ShaderMaterial:
+			unit.sprite.material.set_shader_parameter("sprite_alpha", unit.sprite.modulate.a)
 
 func is_sharing_target_preview() -> bool:
 	return targeting_skill or current_action == Action.MOVE
@@ -673,14 +752,23 @@ func update_health_previews() -> void:
 	for tile in preview_tiles:
 		preview_positions.append(tile.grid_position)
 	for unit in player_units + enemy_units:
-		unit.clear_health_preview()
+		if not is_instance_valid(unit):
+			continue
 		if not targeting_skill or active_skill == null or active_unit == null:
+			if unit.health_preview_active:
+				unit.clear_health_preview()
 			continue
 		var in_preview := unit.grid_position in preview_positions
 		if not in_preview and unit != active_unit:
+			if unit.health_preview_active:
+				unit.clear_health_preview()
 			continue
 		var preview_damage := active_skill.get_preview_damage(self, active_unit, unit) if in_preview else 0
 		var preview_healing := active_skill.get_preview_healing(self, active_unit, unit)
+		if preview_damage <= 0 and preview_healing <= 0:
+			if unit.health_preview_active:
+				unit.clear_health_preview()
+			continue
 		unit.show_health_preview(preview_damage, preview_healing)
 
 func update_aoe_hover(position: Vector2i) -> void:

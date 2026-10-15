@@ -25,11 +25,22 @@ var grid: GridField = null
 var clusters: Dictionary = {} # Direction -> Dictionary of nodes
 var refresh_timer := 0.0
 
+func _get_bottom_menu_top(vp_size: Vector2) -> float:
+	if is_instance_valid(grid) and grid.has_node("CanvasLayer"):
+		var canvas_layer := grid.get_node("CanvasLayer")
+		for child in canvas_layer.get_children():
+			if child is TacticalHUD:
+				var hud_scale := minf(1.0, vp_size.x / 1150.0)
+				return vp_size.y - 92.0 * hud_scale
+	if is_instance_valid(grid) and is_instance_valid(grid.unit_panel) and grid.unit_panel.visible:
+		return vp_size.y - 200.0
+	return vp_size.y
+
 func _is_unit_offscreen(screen_pos: Vector2, vp_size: Vector2) -> bool:
 	var margin_top := 80.0
 	var margin_side := 32.0
-	var has_bottom_hud := is_instance_valid(grid) and is_instance_valid(grid.unit_panel) and grid.unit_panel.visible
-	var margin_bottom := 200.0 if has_bottom_hud else 65.0
+	var menu_top := _get_bottom_menu_top(vp_size)
+	var margin_bottom := vp_size.y - (menu_top - 30.0) if menu_top < vp_size.y else 65.0
 	return (
 		screen_pos.x < margin_side or
 		screen_pos.x > vp_size.x - margin_side or
@@ -282,9 +293,12 @@ func _position_cluster(
 	avg_x /= float(screen_positions.size())
 	avg_y /= float(screen_positions.size())
 
-	var has_bottom_hud := is_instance_valid(grid) and is_instance_valid(grid.unit_panel) and grid.unit_panel.visible
-	var bottom_target_y := (vp_size.y - 210.0) if has_bottom_hud else (vp_size.y - 72.0)
-	var bottom_thresh := (vp_size.y - 220.0) if has_bottom_hud else (vp_size.y - 120.0)
+	var menu_top := _get_bottom_menu_top(vp_size)
+	# Total cluster height at bottom: CARD_SIZE.y (38) + arrow offset (2) + arrow height (~16) = 56px.
+	# For the bottom of the arrow to be exactly 30px above the menu:
+	# target_y + 56 = menu_top - 30 => target_y = menu_top - 86.
+	var bottom_target_y := menu_top - 30.0 - 56.0
+	var bottom_thresh := bottom_target_y - 20.0
 
 	var is_top := avg_y < 120.0
 	var is_bottom := avg_y > bottom_thresh
@@ -338,17 +352,23 @@ func _position_cluster(
 		arrow.position = Vector2((cluster_cards_width - 16.0) / 2.0, CARD_SIZE.y + 2.0)
 
 	else:
+		var side_max_y := menu_top - 30.0 - CARD_SIZE.y
+		var side_min_y := 88.0
+		if side_min_y > side_max_y:
+			side_min_y = side_max_y - 1.0
+		var clamped_y := clampf(avg_y - CARD_SIZE.y / 2.0, side_min_y, side_max_y)
+
 		match dir:
 			Direction.LEFT:
 				var root_x := maxf(16.0, board_left + 8.0)
-				root_control.position = Vector2(root_x, avg_y - CARD_SIZE.y / 2.0)
+				root_control.position = Vector2(root_x, clamped_y)
 				cards_holder.position = Vector2(16.0, 0.0)
 				arrow.text = "◀"
 				arrow.position = Vector2(0.0, (CARD_SIZE.y - 18.0) / 2.0)
 
 			Direction.RIGHT:
 				var root_x := minf(vp_size.x - cluster_cards_width - 32.0, board_right - cluster_cards_width - 8.0)
-				root_control.position = Vector2(root_x, avg_y - CARD_SIZE.y / 2.0)
+				root_control.position = Vector2(root_x, clamped_y)
 				cards_holder.position = Vector2.ZERO
 				arrow.text = "▶"
 				arrow.position = Vector2(cluster_cards_width + 4.0, (CARD_SIZE.y - 18.0) / 2.0)
@@ -366,7 +386,7 @@ func _create_character_card(unit: Unit) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = CARD_SIZE
 	panel.size = CARD_SIZE
-	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.mouse_filter = Control.MOUSE_FILTER_PASS
 
 	var is_ally := unit.side == Unit.Side.PLAYER
 	var team_color := COLOR_PLAYER if is_ally else COLOR_ENEMY
@@ -404,7 +424,7 @@ func _create_count_badge(remaining_count: int, extra_units: Array[Unit]) -> Pane
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = CARD_SIZE
 	panel.size = CARD_SIZE
-	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.mouse_filter = Control.MOUSE_FILTER_PASS
 
 	var style := StyleBoxFlat.new()
 	style.bg_color = COLOR_COUNT_BG

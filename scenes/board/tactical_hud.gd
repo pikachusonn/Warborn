@@ -1,4 +1,5 @@
 extends Control
+class_name TacticalHUD
 ## Compact parchment-and-iron HUD for the isometric demo only.
 ## All commands go through the existing network-aware gameplay handlers.
 
@@ -41,6 +42,8 @@ func _ready() -> void:
 	movement_icon.material = material
 	add_child(movement_icon)
 	actions = HBoxContainer.new()
+	actions.z_index = 10
+	actions.mouse_filter = Control.MOUSE_FILTER_PASS
 	actions.add_theme_constant_override("separation", 8)
 	add_child(actions)
 	move_button = _button("Move", grid.handle_radial_move, actions)
@@ -84,6 +87,7 @@ func _button(label: String, callback: Callable, parent: Control) -> Button:
 	var button := Button.new()
 	button.text = label
 	button.custom_minimum_size = Vector2(66, 62)
+	button.focus_mode = Control.FOCUS_NONE
 	button.add_theme_stylebox_override("normal", _style(INK, MUTED))
 	button.add_theme_stylebox_override("hover", _style(Color("343127"), GOLD))
 	button.add_theme_stylebox_override("pressed", _style(Color("514532"), GOLD))
@@ -140,7 +144,7 @@ func _process(_delta: float) -> void:
 	move_button.disabled = blocked or (grid.energy <= 0 and not grid.free_movement)
 	capture_button.disabled = blocked or not grid.capture_zone.can_unit_capture(unit)
 	cancel_button.disabled = blocked or not (grid.targeting_skill or grid.current_action == GridField.Action.MOVE)
-	end_button.disabled = blocked
+	end_button.disabled = blocked or grid.targeting_skill
 	_update_skill_tooltip()
 	queue_redraw()
 
@@ -154,7 +158,7 @@ func _update_skill_tooltip() -> void:
 	var hovered := -1
 	for i in range(skills.size()):
 		# Inspect bounds so unavailable/passive skills remain readable too.
-		if skills[i].get_global_rect().has_point(get_global_mouse_position()) or skills[i].has_focus():
+		if skills[i].get_global_rect().has_point(get_global_mouse_position()):
 			hovered = i
 			break
 	if hovered < 0 or hovered >= unit.skills.size():
@@ -184,7 +188,7 @@ func _face(unit: Unit) -> Texture2D:
 	if faces.has(unit):
 		return faces[unit]
 	var texture := grid.top_capture_hud.get_face_texture(unit)
-	if unit.data == grid.berserker_data:
+	if unit.data == grid.berserker_data and unit.data != null and unit.data.ally_visual_scale > 1.0:
 		var crop := AtlasTexture.new()
 		crop.atlas = unit.sprite.sprite_frames.get_frame_texture("idle", 0)
 		crop.region = Rect2(1120, 455, 330, 330)

@@ -32,6 +32,8 @@ func _ready() -> void:
 	battle_hud.grid = self
 	$CanvasLayer.add_child(battle_hud)
 
+	_update_unit_facing()
+
 func update_radial_menu() -> void:
 	super.update_radial_menu()
 	# Keep the existing action state machine, but use the bottom action bar.
@@ -76,7 +78,7 @@ func spawn_character(data: UnitData, pos: Vector2i, side: Unit.Side) -> void:
 
 func _process(delta: float) -> void:
 	super._process(delta)
-	_update_berserker_facing()
+	_update_unit_facing()
 
 	# Update the active unit's under-foot white diamond outline
 	var active_iso_tile: TileIsoScene = null
@@ -91,17 +93,94 @@ func _process(delta: float) -> void:
 				active_unit.side if tile_iso == active_iso_tile else -1
 			)
 
-func _update_berserker_facing() -> void:
-	# The two board halves face inward: the upper half looks toward the
-	# lower-left, while the lower half uses the original right-facing art.
-	# Re-evaluate continuously so crossing midfield changes the standee.
-	for unit: Unit in player_units + enemy_units:
-		if not is_instance_valid(unit) or unit.data != berserker_data:
+func _on_unit_position_changed(unit: Unit) -> void:
+	super._on_unit_position_changed(unit)
+	_update_unit_facing()
+
+func _on_unit_defeated(unit: Unit) -> void:
+	super._on_unit_defeated(unit)
+	_update_unit_facing()
+
+func _update_unit_facing() -> void:
+	# Units dynamically face toward the side of the map with the higher concentration of living enemies.
+	# Recalculates on every frame and on position changes so movement naturally updates orientation.
+	var living_players: Array[Unit] = []
+	var living_enemies: Array[Unit] = []
+	for u: Unit in player_units:
+		if is_instance_valid(u) and not u.is_defeated():
+			living_players.append(u)
+	for u: Unit in enemy_units:
+		if is_instance_valid(u) and not u.is_defeated():
+			living_enemies.append(u)
+
+	var all_living: Array[Unit] = []
+	all_living.append_array(living_players)
+	all_living.append_array(living_enemies)
+
+	for unit: Unit in all_living:
+		if not is_instance_valid(unit) or not is_instance_valid(unit.sprite):
 			continue
-		var on_upper_half := unit.grid_position.y < HEIGHT / 2
-		unit.sprite.flip_h = on_upper_half
-		var configured_offset := unit.data.ally_visual_offset if unit.side == Unit.Side.PLAYER else unit.data.enemy_visual_offset
-		unit.sprite.position.x = -absf(configured_offset.x) if on_upper_half else absf(configured_offset.x)
+		var opponents := living_enemies if unit.side == Unit.Side.PLAYER else living_players
+		if opponents.is_empty():
+			continue
+
+		var unit_x := unit.position.x if unit.position != Vector2.ZERO else get_tile_local_position(unit.grid_position).x
+		var unit_pos := unit.position if unit.position != Vector2.ZERO else get_tile_local_position(unit.grid_position)
+
+		var enemies_left := 0
+		var enemies_right := 0
+		var min_dist_left := INF
+		var min_dist_right := INF
+		var inline_tie_left := 0
+		var inline_tie_right := 0
+
+		for opp: Unit in opponents:
+			if not is_instance_valid(opp):
+				continue
+			var opp_x := opp.position.x if opp.position != Vector2.ZERO else get_tile_local_position(opp.grid_position).x
+			var opp_pos := opp.position if opp.position != Vector2.ZERO else get_tile_local_position(opp.grid_position)
+			var dx := opp_x - unit_x
+			var dist := unit_pos.distance_to(opp_pos)
+
+			if dx < -1.0:
+				enemies_left += 1
+				min_dist_left = minf(min_dist_left, dist)
+			elif dx > 1.0:
+				enemies_right += 1
+				min_dist_right = minf(min_dist_right, dist)
+			else:
+				# Vertically inline on screen; check logical grid X
+				if opp.grid_position.x < unit.grid_position.x:
+					inline_tie_left += 1
+				elif opp.grid_position.x > unit.grid_position.x:
+					inline_tie_right += 1
+
+		var face_left := unit.sprite.flip_h
+		if enemies_left > enemies_right:
+			face_left = true
+		elif enemies_right > enemies_left:
+			face_left = false
+		elif enemies_left > 0 or enemies_right > 0:
+			# Equal count on left and right: face toward the closer enemy
+			if min_dist_left < min_dist_right:
+				face_left = true
+			elif min_dist_right < min_dist_left:
+				face_left = false
+		elif inline_tie_left != inline_tie_right:
+			face_left = inline_tie_left > inline_tie_right
+
+		unit.sprite.flip_h = face_left
+
+		# Maintain mirrored visual offset when horizontal facing flips
+		if unit.data != null:
+			if unit.data == berserker_data:
+				var configured_offset := unit.data.ally_visual_offset if unit.side == Unit.Side.PLAYER else unit.data.enemy_visual_offset
+				unit.sprite.position.x = -absf(configured_offset.x) if face_left else absf(configured_offset.x)
+			else:
+				if not unit.has_meta("base_sprite_offset_x"):
+					unit.set_meta("base_sprite_offset_x", unit.sprite.position.x)
+				var base_x: float = unit.get_meta("base_sprite_offset_x")
+				unit.sprite.position.x = -base_x if face_left else base_x
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
